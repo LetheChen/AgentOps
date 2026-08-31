@@ -2,7 +2,7 @@
 
 > **多 Harness · 多工作流 · 可视化作战室 · 一句话即办**
 >
-> 用户对 Manager Agent 说一句话，即可完成 OA 智能审批、日志巡检、视频生成、周报撰写、智能问数、知识检索、任务分解等办公全场景；底层打通 Claude Code / OpenCode / Kimi / 本地 LLM 等多模型基座；可视化作战室让执行过程、思考逻辑、产物、置信度全程可见、可审、可干预。
+> 用户对 Manager Agent 说一句话，即可完成 OA 智能审批、日志巡检、视频生成、周报撰写、智能问数、知识检索、任务分解等办公全场景；底层打通 Claude Code / OpenCode / Kimi / 本地 LLM 等多 Harness 基座；可视化作战室让执行过程、思考逻辑、产物、置信度全程可见、可审、可干预。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org)
@@ -23,6 +23,12 @@
 ## 功能截图
 
 > 完整图廊 + 文字说明见 [docs/gallery/README.md](docs/gallery/README.md)
+
+### 业务智能分析 + A2UI 生成式 UI ⭐
+
+A2UI 受限协议直接在对话流中渲染 **36 类 widget**（18 个 A2UI v1.0 标准组件 + 18 个 AgentOps Catalog 扩展）：图表 / DAG / SQL 结果 / 媒体 / 表单 / 弹窗 / 进度条 / 时间轴 一气呵成，坏数据在协议层拒绝。
+
+![业务智能分析 + 生成式 UI](docs/gallery/业务智能分析+生成式UI.png)
 
 ### Agent 管理 — 可视化作战室
 
@@ -59,12 +65,6 @@ Agent 列表 / 注册管理 / 启停控制。Agent 定义层（role / tools / sk
 三层知识库（Vault / 管理 / 高级分析），支持个人 vault（Obsidian 兼容）。
 
 ![知识管理](docs/gallery/知识管理.png)
-
-### 业务智能分析 + A2UI 生成式 UI
-
-受限协议渲染（13 类 widget）：图表 / DAG / SQL 结果 / 媒体直接在对话流中呈现，坏数据在协议层拒绝。
-
-![业务智能分析 + 生成式 UI](docs/gallery/业务智能分析+生成式UI.png)
 
 ***
 
@@ -106,16 +106,16 @@ AgentOps 是一个 **"Manager Agent 超级助理 + 可视化作战室 + 生成�
 
 **核心能力**：
 
-| 模块                              | 说明                                                                                                                                                                                      |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🧠 **Manager Agent**            | 统一入口，理解用户意图、调度子 Agent 与 DAG 工作流                                                                                                                                                         |
-| 🔀 **DAG 工作流**                  | 声明式工作流编排（YAML），可视化编辑器 + 实时事件流                                                                                                                                                           |
-| 🤖 **多 Harness 适配**             | Claude Code / OpenCode / Kimi / MiniMax / 本地 LLM (vLLM) / HTTP / Deterministic，模型可热切换                                                                                                   |
-| 🎨 **生成式 UI（A2UI 受限协议）**        | Agent 回复中直接渲染图表、DAG、SQL 结果、媒体等内容；坏数据在协议层拒绝；13 类 widget（chart / table / card / media / callout / tabs / modal / form / accordion / progress / divider / tree / badge）让对话流具备"看一眼即懂"的视觉表达力 |
-| 🔐 **凭据与权限**                    | 目录 ACL + 凭据本地加密 + 操作全审计                                                                                                                                                                 |
-| 📊 **可视化作战室**                   | 任务状态机 + 思考链路 + 中间产物 + 置信度全链路可见、可审、可干预                                                                                                                                                   |
-| 📚 **三层知识库**                    | 个人 Vault（Obsidian 兼容）/ 管理知识域 / 高级分析；智能问答 + 知识域仪表盘                                                                                                                                       |
-| 🎬 **18 个领域 Agent + 16 套预置工作流** | 智能审批、视频生产、周报、智能问数、任务调度、日志巡检 等开箱即用                                                                                                                                                       |
+| 模块                              | 说明                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🧠 **Manager Agent**            | 统一入口，理解用户意图、调度子 Agent 与 DAG 工作流                                                                                                                                                                                                                                                                                                  |
+| 🔀 **DAG 工作流**                  | 声明式工作流编排（YAML），可视化编辑器 + 实时事件流                                                                                                                                                                                                                                                                                                    |
+| 🤖 **多 Harness 适配**             | Claude Code / OpenCode / Kimi / MiniMax / 本地 LLM (vLLM) / HTTP / Deterministic，模型可热切换                                                                                                                                                                                                                                            |
+| 🎨 **生成式 UI（A2UI 受限协议）**        | Agent 回复中直接渲染图表、DAG、SQL 结果、媒体等内容；坏数据在协议层拒绝；36 类 widget（18 A2UI v1.0 标准 + 18 AgentOps Catalog 扩展：AoGrid / AoMetric / AoTable / AoBarChart / AoLineChart / AoPieChart / AoDag / AoTimeline / AoArtifact / AoStep / AoSection / AoProgress / AoStatusBadge / AoList / AoDisclosure / AoLink / AoIf / AoGridItem）让对话流具备"看一眼即懂"的视觉表达力 |
+| 🔐 **凭据与权限**                    | 目录 ACL + 凭据本地加密 + 操作全审计                                                                                                                                                                                                                                                                                                          |
+| 📊 **可视化作战室**                   | 任务状态机 + 思考链路 + 中间产物 + 置信度全链路可见、可审、可干预                                                                                                                                                                                                                                                                                            |
+| 📚 **三层知识库**                    | 个人 Vault（Obsidian 兼容）/ 管理知识域 / 高级分析；智能问答 + 知识域仪表盘                                                                                                                                                                                                                                                                                |
+| 🎬 **18 个领域 Agent + 16 套预置工作流** | 智能审批、视频生产、周报、智能问数、任务调度、日志巡检 等开箱即用                                                                                                                                                                                                                                                                                                |
 
 > 用户对 Manager Agent 说一句话，AgentOps 即可完成 OA 智能审批、日志巡检、视频生成、周报撰写、智能问数、知识检索、任务分解等办公全场景，并直接在对话流内给出图表 / DAG / 审批结果等富交互产物。
 
@@ -150,18 +150,18 @@ cd AgentOps
 
 1. 检测 Docker 与 docker compose
 2. 从 `.env.example` 复制出 `.env`
-3. 构建 `agentops-api` 与 `agentops-web` 镜像
-4. 初始化数据库（33 张表自动创建）+ 创建 admin 账号
-5. 启动 `api`（端口 1987）+ `web`（端口 80）
+3. 构建单镜像 `agentops:latest`（前后端合并到一个镜像）
+4. 容器首次启动自动建表（33 张表）+ 创建 admin 账号
+5. 启动单容器（端口 80，对外暴露 Web + /api + /docs）
 6. 等待健康检查通过
 
 **访问**：
 
 * 前端 UI：<http://localhost>
 
-* API：<http://localhost:1987>
+* API：<http://localhost/api/...>
 
-* Swagger：<http://localhost:1987/docs>
+* Swagger：<http://localhost/docs>
 
 * 默认账号：`admin` / 密码见 `.env` 或 `data/bootstrap-password.txt`
 
@@ -294,12 +294,12 @@ cd AgentOps
 
 默认需要以下端口（可在 `.env` 修改）：
 
-| 端口   | 服务                            | 必选      |
-| ---- | ----------------------------- | ------- |
-| 80   | Web UI（nginx）                 | ✅       |
-| 1987 | API（uvicorn）                  | ✅       |
-| 5173 | 前端 dev server（仅本地源码模式）        | ✅（本地模式） |
-| 7891 | agentops-worker WS bridge（可选） | ⚪       |
+| 端口   | 服务                                  | 必选      |
+| ---- | ----------------------------------- | ------- |
+| 80   | Web UI + API + Swagger（nginx 单端口全栈） | ✅       |
+| 1987 | uvicorn 容器内部端口（不对外暴露）               | —（容器内）  |
+| 5173 | 前端 dev server（仅本地源码模式）              | ✅（本地模式） |
+| 7891 | agentops-worker WS bridge（可选）       | ⚪       |
 
 **检测端口冲突**：
 
@@ -358,9 +358,8 @@ OPENAI_API_KEY=
 **常用可选项**：
 
 ```env
-# 端口（默认 80 / 1987）
+# 端口（默认 80；单容器仅对外暴露 Web 80 端口）
 AGENTOPS_WEB_PORT=80
-AGENTOPS_API_PORT=1987
 
 # 镜像版本（升级时改这里）
 AGENTOPS_VERSION=latest
@@ -398,17 +397,15 @@ chmod +x install.sh
 
    * 已存在则跳过
 
-3. **构建镜像**（首次 5-10 分钟；后续约 30 秒）
+3. **构建单镜像**（首次 5-10 分钟；后续约 30 秒）
 
-   * `agentops-api:latest`：后端 Python 镜像（基于 `python:3.12-slim`）
+   * `agentops:latest`：单镜像同时包含 Python 后端（基于 `python:3.12-slim`）+ 前端 nginx（基于 `nginx:1.27-alpine`）
 
-   * `agentops-web:latest`：前端 nginx 镜像（基于 `nginx:1.27-alpine`）
-
-   * 进度：`[AgentOps] 构建后端镜像 agentops-api:latest（首次约 5-10 分钟）`
+   * 进度：`[AgentOps] 构建单镜像 agentops:latest（首次约 5-10 分钟）`
 
    * **国内网络优化**：Dockerfile 内已使用 npmmirror.com（npm）和 aliyun（apt）镜像源；若仍超时，可设置 `SKIP_BUILD=1` 用现成镜像。
 
-4. **首次启动 init 服务**（< 30 秒）
+4. **首次启动**（< 30 秒，**容器内自动**）
 
    * 自动创建 SQLite 数据库（33 张表）
 
@@ -416,13 +413,11 @@ chmod +x install.sh
 
 5. **启动主服务**（< 10 秒）
 
-   * `agentops-api` 容器（端口 1987）
-
-   * `agentops-web` 容器（端口 80）
+   * 单容器 `agentops`（端口 80，对外暴露 Web + /api + /docs；uvicorn :1987 仅容器内）
 
 6. **健康检查**（最多 60 秒）
 
-   * 等待 `http://localhost:1987/` 返回 200
+   * 等待 `http://localhost/` 返回 200
 
 **期望最终输出**：
 
@@ -464,10 +459,9 @@ docker compose --profile worker up -d
 
 ```bash
 # 查看日志（实时）
-docker compose logs -f api
-docker compose logs -f web
+docker compose logs -f agentops
 
-# 查看所有容器状态
+# 查看容器状态
 docker compose ps
 
 # 停止服务（保留数据）
@@ -481,10 +475,10 @@ docker compose pull
 docker compose up -d
 
 # 进入容器调试
-docker compose exec api bash
+docker compose exec agentops bash
 
 # 查看资源占用
-docker stats agentops-api agentops-web
+docker stats agentops
 ```
 
 ### 本地源码部署完整流程
@@ -592,7 +586,7 @@ docker volume inspect agentops_data
 ```bash
 # 方法 1：临时使用国内镜像
 docker build --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
-    -t agentops-api:latest -f docker/agentops-api/Dockerfile .
+    -t agentops:latest -f docker/agentops/Dockerfile .
 
 # 方法 2：修改 Dockerfile（永久生效），将 pip install 改为：
 # pip install -i https://pypi.tuna.tsinghua.edu.cn/simple ...
@@ -622,7 +616,7 @@ brew install node@20
 # Windows：下载安装 nvm-windows
 ```
 
-#### Q3：容器启动后 `curl http://localhost:1987` 连不上
+#### Q3：容器启动后 `curl http://localhost` 连不上
 
 **排查步骤**：
 
@@ -630,21 +624,21 @@ brew install node@20
 # 1. 看容器是否启动
 docker compose ps
 
-# 2. 看 api 容器日志
-docker compose logs api --tail=100
+# 2. 看 agentops 容器日志
+docker compose logs agentops --tail=100
 
 # 3. 进容器内部 curl
-docker compose exec api curl -fsS http://127.0.0.1:1987/
+docker compose exec agentops curl -fsS http://127.0.0.1/
 
 # 4. 检查端口映射
-docker port agentops-api
+docker port agentops
 ```
 
 **常见根因**：
 
-* 端口被宿主机其他进程占用（修改 `.env` 中 `AGENTOPS_API_PORT`）
+* 端口被宿主机其他进程占用（修改 `.env` 中 `AGENTOPS_WEB_PORT`）
 
-* 防火墙拦截（Linux `sudo ufw allow 1987`，Windows 防火墙放行）
+* 防火墙拦截（Linux `sudo ufw allow 80`，Windows 防火墙放行）
 
 * `.env` 中关键变量缺失导致启动失败（看日志最后几行）
 
@@ -656,13 +650,12 @@ docker port agentops-api
 # 重置 admin 密码（删除数据库后重启）
 docker compose down
 docker volume rm agentops_data
-docker compose up -d api
-# 重新跑 init
-docker compose --profile init run --rm init
+docker compose up -d agentops
+# 容器首次启动会自动建表 + 创建 admin（密码随机写入 data/bootstrap-password.txt）
 
-# 或保留数据库：手动修改 security_users 表（仅 dev）
-docker compose exec api sqlite3 /app/data/audit.db \
-  "UPDATE users SET password_hash='<新的argon2哈希>' WHERE username='admin';"
+# 或保留数据库：手动修改 users 表（仅 dev）
+docker compose exec agentops sqlite3 /app/data/audit.db \
+  "UPDATE security_users SET password_hash='<新的argon2哈希>' WHERE username='admin';"
 ```
 
 #### Q5：升级后旧数据库结构不兼容
@@ -677,7 +670,7 @@ docker compose exec api sqlite3 /app/data/audit.db \
 
 * **资源限制**：在 `docker-compose.yml` 中加 `mem_limit: 2g` / `cpus: '2'`。
 
-* **大文件上传**：nginx `client_max_body_size` 默认 50m，可在 `docker/agentops-web/nginx.conf` 调整。
+* **大文件上传**：nginx `client_max_body_size` 默认 50m，可在 `docker/agentops/nginx.conf` 调整。
 
 ### 生产部署建议
 
@@ -708,9 +701,8 @@ AgentOps/
 ├── skills/             # 技能定义（dag-ops / subagent-dispatch 等）
 ├── web/                # React 前端（Vite + ReactFlow + A2UI）
 ├── docker/             # Docker 镜像构建文件
-│   ├── agentops-api/   # 后端镜像
-│   ├── agentops-web/   # 前端镜像（nginx）
-│   └── agentops-worker/# 容器化子 Agent
+│   ├── agentops/       # 全栈单镜像（nginx 前端 + uvicorn 后端 + start.sh 一键拉起）
+│   └── agentops-worker/# 容器化子 Agent（可选）
 ├── tests/              # pytest 测试
 ├── docs/               # 公开设计文档（架构核心）
 ├── install.sh          # Docker 一键安装（Linux / macOS）
@@ -824,7 +816,7 @@ edges:
 
 ## 致谢
 
-* 感谢所有 Claude Code / OpenCode / Codex / Kimi 等模型基座
+* 感谢所有 Claude Code / OpenCode / Codex / Kimi / MiniMax 等 Harness 基座
 
-* 感谢 A2UI 协议与 ReactFlow / Vite / FastAPI / SQLite 等开源生态
+* 感谢 A2UI 受限协议与 ReactFlow / Vite / FastAPI / SQLite 等开源生态
 
