@@ -1,6 +1,6 @@
 # AGENTS.md — AgentOps
 
-最后更新：2026-08-31（按 init-claude-md 重建）
+最后更新：2026-08-31（开源仓库重建 + 隐私全量清洗 + README 单镜像同步；护栏新增「commit 前必 git diff 验证」）
 
 ## Session Maintenance Protocol
 
@@ -67,6 +67,9 @@ curl http://127.0.0.1:5173/
 - 目录 rename 后必查引用：波及 CLAUDE.md / TODO.md / skills/*.md / README.md 等非 docs/ 文件
 - grep 旧名时要避免被新前缀误命中：用 `\b` 或负向 lookbehind
 - 临时 .ps1 / .py 脚本要即用即删：跑完立即 `Remove-Item`，不要在 docs/ / scripts/ 下残留
+- **删除 `.git` 前必须 `git add` + `git diff --cached` 验证改动确实已 staged**：commit message 写得再漂亮，HEAD 里没改就是没改；做了 SearchReplace 不等于真的改了工作区
+- **commit message 必须与实际改动一致**：commit 之前先 `git diff --cached --stat`，看到 README.md 0 改动就别在 message 里说改了
+- **提交到公开仓库前必做隐私扫描**：grep 至少 `辰安 / 公司名 / 内部比赛名 / 内部 IP / 本地绝对路径`；命中后立即决定保留（历史项目名）/ 删除（公司信息）
 
 ## Project conventions
 
