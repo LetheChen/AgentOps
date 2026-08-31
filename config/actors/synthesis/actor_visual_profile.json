@@ -1,0 +1,43 @@
+{
+  "actor_id": "synthesis",
+  "description": "综合分析员（独立分析维度）：三次完整快照推送分析结论、依据与风险",
+  "allowed_surface_views": [
+    {
+      "view_id": "analysis-live",
+      "output_contract": "ActorReport",
+      "description": "分析实时面板 — 置信度、结论、依据与风险边界",
+      "required_phases": ["started", "partial", "final"],
+      "fields": {
+        "title": {"type": "string", "required": true, "max_length": 80},
+        "phase_text": {"type": "string", "required": true, "max_length": 16},
+        "summary": {"type": "string", "required": true, "max_length": 120},
+        "progress": {"type": "integer", "required": true, "min": 0, "max": 100},
+        "confidence": {"type": "integer", "required": true, "min": 0, "max": 100},
+        "evidence_count": {"type": "integer", "required": true, "min": 0},
+        "risk_count": {"type": "integer", "required": true, "min": 0},
+        "conclusion": {"type": "string", "required": true, "max_length": 240},
+        "evidence_one": {"type": "string", "required": true, "max_length": 240},
+        "evidence_two": {"type": "string", "required": true, "max_length": 240},
+        "caveat": {"type": "string", "required": true, "max_length": 240},
+        "primary_tone": {"type": "enum", "required": true, "values": ["neutral", "info", "positive", "warning", "critical"]}
+      },
+      "template": [
+        {"id": "root", "component": "Column", "children": ["badge", "bar", "summary_text", "grid", "concl", "ev", "caveat"]},
+        {"id": "badge", "component": "AoStatusBadge", "text": "$title", "tone": "$primary_tone"},
+        {"id": "bar", "component": "AoProgress", "label": "$phase_text", "value": "$progress"},
+        {"id": "summary_text", "component": "Text", "text": "$summary"},
+        {"id": "grid", "component": "AoGrid", "children": ["m_conf", "m_evidence", "m_risk"], "columns": {"default": 3}},
+        {"id": "m_conf", "component": "AoMetric", "label": "置信度", "value": "$confidence", "unit": "%"},
+        {"id": "m_evidence", "component": "AoMetric", "label": "依据数", "value": "$evidence_count", "unit": "条"},
+        {"id": "m_risk", "component": "AoMetric", "label": "风险项", "value": "$risk_count", "unit": "项"},
+        {"id": "concl", "component": "AoDisclosure", "title": "核心结论", "children": ["concl_text"]},
+        {"id": "concl_text", "component": "Text", "text": "$conclusion"},
+        {"id": "ev", "component": "AoDisclosure", "title": "关键依据", "children": ["ev_one_text", "ev_two_text"]},
+        {"id": "ev_one_text", "component": "Text", "text": "$evidence_one"},
+        {"id": "ev_two_text", "component": "Text", "text": "$evidence_two"},
+        {"id": "caveat", "component": "AoDisclosure", "title": "风险与边界", "children": ["caveat_text"]},
+        {"id": "caveat_text", "component": "Text", "text": "$caveat"}
+      ]
+    }
+  ]
+}

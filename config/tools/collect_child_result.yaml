@@ -1,0 +1,40 @@
+# config/tools/collect_child_result.yaml
+# Manager Agent 专用工具：阻塞收集 trigger_workflow 启动的子 run 结果
+# 解决了 manager 派发子任务后无回写机制、用户看不到结果的问题
+tool_id: collect_child_result
+display_name: 收集子任务结果
+description: |
+  阻塞等待子 run 完成（达到终态：completed/failed/cancelled/dormant/active），
+  返回子 agent 的最终消息列表 + final_outputs + summary，供 manager 整合给用户。
+
+  这是 trigger_workflow 的标准伴侣：派任务必须 + 收结果。LLM 收到结果后可以：
+  1. 整合子 agent 的回复向用户汇报
+  2. 再调一次 trigger_workflow 触发下一个子任务
+  3. 把结果作为 emit_widget / memo 推给用户
+
+  阻塞时间：默认 600s（10 分钟），超时返回当前状态 + 部分结果。
+input_schema:
+  type: object
+  properties:
+    run_id:
+      type: string
+      description: trigger_workflow 返回的子 run_id
+    timeout_seconds:
+      type: integer
+      default: 600
+      description: 最长阻塞秒数；超时返回当前状态
+    poll_interval_seconds:
+      type: number
+      default: 2.0
+      description: poll 间隔秒数
+  required: [run_id]
+handler:
+  module: tools.collect_child_result
+  function: collect_child_result
+  config:
+    timeout_seconds: 30
+allowed_domains:
+  - manager
+audit:
+  log_args: true
+  log_result: true

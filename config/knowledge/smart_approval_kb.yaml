@@ -1,0 +1,20 @@
+# config/knowledge/smart_approval_kb.yaml
+kb_id: smart_approval_kb
+display_name: 智能审批知识库
+description: 审批规则、流程定义、审批权限矩阵
+source:
+  type: vector_store
+  connection: ${KB_SMART_APPROVAL_URL}
+  collection: smart_approval_docs
+permissions:
+  read:
+    - smart_approval                     # 本域读写
+  write:
+    - smart_approval                     # 只有本域能写
+  admin:
+    - smart_approval_admin
+content_categories:
+  - approval_rules                       # 审批规则
+  - process_definitions                  # 流程定义
+  - approval_matrix                      # 审批权限矩阵
+retention_days: 730

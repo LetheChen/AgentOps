@@ -1,0 +1,39 @@
+# config/tools/data_analysis.yaml
+tool_id: data_analysis
+display_name: 数据分析
+description: 执行数据分析（统计/趋势/预测/归因）
+input_schema:
+  type: object
+  properties:
+    dataset:
+      type: string
+      description: 数据集来源（SQL 结果或表名）
+    analysis_type:
+      type: string
+      enum: [statistic, trend, forecast, attribution]
+      description: 分析类型
+    dimensions:
+      type: array
+      items:
+        type: string
+      description: 分析维度
+    metrics:
+      type: array
+      items:
+        type: string
+      description: 分析指标
+    time_range:
+      type: string
+      description: 时间范围
+  required: [dataset, analysis_type]
+handler:
+  module: tools.analysis_tools
+  function: run_data_analysis
+  config:
+    timeout_seconds: 120
+    max_rows: 100000
+allowed_domains:
+  - smart_analysis
+audit:
+  log_args: true
+  log_result: true

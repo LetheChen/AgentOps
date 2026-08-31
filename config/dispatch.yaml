@@ -1,0 +1,20 @@
+# config/dispatch.yaml
+# task-dispatcher 调度配置（P2 自动调度，DESIGN_task_lifecycle_automation_v1.md §5.6）
+# 修改后需重启服务生效（与 patrol.yaml 同策略，不做热加载）
+#
+# 并发上限：全局同时执行的 coding agent 数（按 codex 服务承载能力校准）
+# 声望：时间衰减（半衰期）+ ε 探索保底 + 保底权重，反马太效应三件套
+# executor 池：候选执行者清单（声望加权轮询从此池选择）
+
+concurrency:
+  max_concurrent: 2
+
+reputation:
+  half_life_days: 30    # 声望半衰期：30 天前的贡献权重减半（防吃老本）
+  epsilon: 0.2          # ε 探索：20% 概率无视声望均匀随机（防新 agent 饥饿）
+  base_weight: 10.0     # 保底权重：声望 0 的 agent 也有加权抽中机会
+
+executors:
+- agent_id: coding_agent
+  harness: codex        # 决策 #10：推荐 harness 已从 opencode 切换为 codex
+  enabled: true

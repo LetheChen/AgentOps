@@ -1,0 +1,25 @@
+# config/knowledge/shared_kb.yaml
+kb_id: shared_kb
+display_name: 跨域共享知识库
+description: 跨域共享文档、全局术语表、通用规范
+source:
+  type: vector_store
+  connection: ${KB_SHARED_URL}
+  collection: shared_docs
+permissions:
+  read:                                  # 所有域 + manager 可读
+    - smart_query
+    - smart_ops
+    - smart_approval
+    - smart_form
+    - smart_analysis
+    - manager
+  write:                                 # 只有 manager 能写
+    - manager
+  admin:
+    - manager
+content_categories:
+  - cross_domain_docs                    # 跨域文档
+  - glossary                             # 全局术语表
+  - conventions                          # 通用规范
+retention_days: 1095

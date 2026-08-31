@@ -1,0 +1,21 @@
+# config/knowledge/smart_query_kb.yaml
+kb_id: smart_query_kb
+display_name: 智能问数知识库
+description: 数据字典、SQL 模板、业务指标定义
+source:
+  type: vector_store
+  connection: ${KB_SMART_QUERY_URL}
+  collection: smart_query_docs
+permissions:
+  read:
+    - smart_query                        # 本域读写
+    - smart_analysis                     # 分析域只读（需数据字典）
+  write:
+    - smart_query                        # 只有本域能写
+  admin:
+    - smart_query_admin
+content_categories:
+  - data_dictionary                      # 数据字典
+  - sql_templates                        # SQL 模板
+  - business_metrics                     # 业务指标
+retention_days: 365

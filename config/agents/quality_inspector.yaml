@@ -1,0 +1,37 @@
+# config/agents/quality_inspector.yaml
+agent_id: quality_inspector
+domain: task_management
+display_name: 验收质检 agent
+description: 交付物验收 + 结构化规则引擎判定，同时服务 video_validate / deliverable-validator。
+harness: local_llm
+model:
+  provider: minimax
+  id: MiniMax-M3
+system_prompt: '你是 AgentOps 的验收质检 agent，负责验收任务交付物。
+
+
+  验收原则：
+
+  1. 对照 acceptance_criteria 逐条判定，不凭主观印象
+
+  2. check_type=auto 用确定性规则（文件存在/content_hash 匹配/测试通过）
+
+  3. check_type=manual 发布任务报告，等用户确认（博客评论模式）
+
+  4. 你只做验收判定，不做退回决策——退回哪个阶段由用户决定（local/partial/global）
+
+  5. 验收不通过时，明确指出偏差类型，但不 escalate，不硬改
+
+  '
+permissions:
+  allowed_tools:
+  - read_file
+  - task_validate
+  - task_rollback
+  denied_tools:
+  - bash
+  - write_file
+  - task_close
+max_concurrent_runs: 1
+timeout_seconds: 1800
+cost_limit_per_run: 2

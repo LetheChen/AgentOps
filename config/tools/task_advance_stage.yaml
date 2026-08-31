@@ -1,0 +1,43 @@
+# config/tools/task_advance_stage.yaml
+# P0 任务管理：推进任务状态
+tool_id: task_advance_stage
+display_name: 推进任务状态
+description: |
+  推进任务到下一个状态（idea→backlog→discussing→reviewing→closed）。
+  带乐观锁 if_version，冲突自动重试一次。
+  reviewing→closed 是用户决策态（requires_user=True），agent 不可自动关闭，必须等用户审批。
+  非法转移返回 400 + 合法目标列表。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    target_status:
+      type: string
+      enum: [idea, backlog, discussing, reviewing, closed]
+      description: 目标状态
+    if_version:
+      type: integer
+      description: 乐观锁版本号（上次读取的 version）
+    thread_id:
+      type: string
+      description: 对话线程 ID（透传，可选）
+    comment:
+      type: string
+      description: 转移备注（存 stage_output）
+    actor:
+      type: string
+      enum: [user, agent]
+      default: user
+      description: 触发者；agent 触发 requires_user=True 的转移会被拒绝
+  required: [task_id, target_status, if_version]
+handler:
+  module: tools.task_advance_stage
+  function: task_advance_stage
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager, task_planner]
+audit:
+  log_args: true
+  log_result: true

@@ -1,0 +1,143 @@
+workflow_id: task-patrol
+name: 系统巡检
+version: 1
+description: |
+  4 步 DAG 版系统巡检：probe → diagnose → report → notify
+  覆盖两类异常：① 程序异常（进程死亡/端口不通/磁盘满/内存满/CPU 高）
+              ② 任务异常（DAG run failed/timeout）
+  通知走 emit_alert 工具推送到监控中心 SSE 通道（不发企业微信）。
+  支持手动触发、定时触发、Manager 调度三种方式。
+  
+workspace:
+  root: "workspace/task-patrol/{{run_id}}/"
+  structure:
+    reports: reports/
+    data: data/
+inputs:
+  - name: check_scope
+    type: string
+    required: false
+    default: all
+    description: "检测范围: all（默认）/ process / port / disk / memory / cpu / task"
+  - name: target_services
+    type: string
+    required: false
+    default: "agentops_backend,agentops_frontend"
+    description: "逗号分隔的服务名（如 agentops_backend,agentops_frontend）"
+  - name: target_ports
+    type: string
+    required: false
+    default: "1987,5173"
+    description: 逗号分隔的目标端口
+  - name: time_range
+    type: string
+    required: false
+    default: 1h
+    description: 失败任务查询时间范围（如 1h/24h/7d，默认 1h）
+nodes:
+  probe:
+    name: 采集指标
+    type: agent
+    agent: task_monitor
+    business_role: 系统巡检员
+    role_prompt: |
+      你是系统巡检员，负责采集进程/端口/资源指标和失败任务列表。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M2.7
+    after: []
+    timeout_seconds: 60
+    inputs:
+      - check_scope
+      - target_services
+      - target_ports
+      - time_range
+    outputs:
+      probe_result:
+        to: "diagnose.in:probe_result"
+  diagnose:
+    name: 综合判定
+    type: agent
+    agent: task_monitor
+    business_role: 异常判定员
+    role_prompt: |
+      你是异常判定员，负责基于采集结果综合判定异常等级。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M2.7
+    after: [probe]
+    timeout_seconds: 120
+    inputs:
+      - probe_result
+    outputs:
+      critical_issues:
+        to: "report.in:critical_issues"
+  report:
+    name: 生成报告
+    type: agent
+    agent: task_monitor
+    business_role: 报告撰写员
+    role_prompt: |
+      你是报告撰写员，负责将判定结果写入 Markdown 报告。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M2.7
+    after: [diagnose]
+    timeout_seconds: 120
+    inputs:
+      - critical_issues
+    outputs:
+      report_path:
+        to: "notify.in:report_path"
+      critical_summary:
+        to: "notify.in:critical_summary"
+  notify:
+    name: 推送告警
+    type: agent
+    agent: task_monitor
+    business_role: 告警推送员
+    role_prompt: |
+      你是告警推送员，负责将告警推送到监控中心 SSE 通道。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M2.7
+    after: [report]
+    timeout_seconds: 120
+    inputs:
+      - critical_summary
+      - report_path
+    outputs:
+      notify_result:
+        to: ""
+    skip_if: "{{not report.critical_summary}}"
+widgets:
+  - id: w_task_patrol_progress
+    type: progress_status
+    title: 巡检进度
+    emit_on:
+      node: probe
+      event: node.started
+    props:
+      title: 系统巡检
+      steps:
+        -           id: probe
+                    title: 采集指标
+                    node: probe
+        -           id: diagnose
+                    title: 综合判定
+                    node: diagnose
+        -           id: report
+                    title: 生成报告
+                    node: report
+        -           id: notify
+                    title: 推送告警
+                    node: notify
+  - id: w_task_patrol_report
+    type: artifact_ref
+    title: 巡检报告
+    emit_on:
+      node: report
+      event: node.completed
+    props:
+      path: "{{report.report_path}}"
+      format: markdown

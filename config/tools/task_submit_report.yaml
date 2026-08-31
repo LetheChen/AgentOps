@@ -1,0 +1,44 @@
+# config/tools/task_submit_report.yaml
+# V1 任务管理：agent 提交任务报告 + 可选评论
+tool_id: task_submit_report
+display_name: 提交任务报告
+description: |
+  agent 完成阶段性产出后提交 task_report：
+  - content 为正文（变更/验证/风险）
+  - artifact_ids 关联交付物
+  - self_check 为验收自检结果（对照 acceptance_criteria）
+  博客评论模式：report 落库后用户/其他 agent 可在 task_comments 回复。
+  若提供 comment_body 则同步写一条 comment_type=report 评论。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    agent_id:
+      type: string
+      description: 提交 agent ID
+    content:
+      type: string
+      description: 报告正文（变更/验证/风险）
+    artifact_ids:
+      type: array
+      items:
+        type: string
+      description: 关联交付物 ID 列表
+    self_check:
+      type: object
+      description: 验收自检结果（对照 acceptance_criteria）
+    comment_body:
+      type: string
+      description: 若提供则同步写一条 comment_type=report 评论
+  required: [task_id, agent_id, content]
+handler:
+  module: tools.task_submit_report
+  function: task_submit_report
+  config:
+    timeout_seconds: 10
+allowed_domains: [coding_agent, task_planner]
+audit:
+  log_args: true
+  log_result: true

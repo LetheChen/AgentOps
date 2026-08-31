@@ -1,0 +1,31 @@
+# config/tools/describe_database.yaml
+# 多轮对话场景：manager 按需查数据库表结构（白名单即 schema 授权源）
+# 设计动机：manager 多轮对话直查数据时，需要知道有哪些表/字段，但不应该把
+# 完整 schema 全量塞进 manager system_prompt（会膨胀）。本工具按需返回，
+# 复用 config/db_whitelist.yaml 单一数据源，不连数据库。
+tool_id: describe_database
+display_name: 查询数据库表结构
+description: |
+  返回某数据库连接的表结构（可用 schema / 表清单 / 禁止访问的列）。
+  数据来源是 config/db_whitelist.yaml（白名单即 schema 授权），不连数据库。
+  当你要写 SQL 查询但不确定有哪些表/字段时，先调本工具看表结构。
+  常见场景：用户问业务数据 → describe_database('mysql:audit_reader') 看表 → 写 SELECT。
+input_schema:
+  type: object
+  properties:
+    database:
+      type: string
+      description: 连接标识，形如 "mysql:audit_reader"（凭据管理中配置的连接 ID 前缀 + id）
+  required: [database]
+handler:
+  module: tools.db_tools
+  function: describe_database
+  config:
+    timeout_seconds: 5
+allowed_domains:
+  - manager
+  - smart_query
+  - smart_analysis
+audit:
+  log_args: true
+  log_result: false   # 表结构可能较长，不入审计日志

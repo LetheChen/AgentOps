@@ -1,0 +1,25 @@
+tool_id: mm_speech
+name: mm_speech
+description: MiniMax CLI 语音合成，用 speech-2.8-hd 高音质模型生成场景旁白
+allowed_domains:
+  - video_production
+handler: cli
+command: mmx speech synthesize --text "{text}" --out {output} --model speech-2.8-hd
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      description: 要合成语音的文本内容
+    output:
+      type: string
+      description: 输出音频文件路径，如 assets/scene_01.mp3
+  required:
+    - text
+    - output
+outputs:
+  audio_file: "file:{output}"
+permission_required: write
+timeout: 120
+working_dir: "{{workspace.root}}"
+rate_limit: "2/s"

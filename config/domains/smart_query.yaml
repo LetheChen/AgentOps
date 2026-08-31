@@ -1,0 +1,22 @@
+# config/domains/smart_query.yaml
+domain: smart_query
+display_name: 智能问数域
+description: 数据查询、报表、统计分析
+default_harness: codex
+default_model:
+  provider: deepseek
+  id: deepseek-coder
+default_permissions:
+  allowed_tools:                         # 域级默认允许
+    - sql_query
+    - export_report
+  denied_tools:                          # 域级硬禁止（agent 不可覆盖）
+    - server_restart
+    - db_migrate
+    - ssh_exec
+    - sql_execute
+    - submit_form
+    - approval_flow
+default_knowledge_bases:
+  - smart_query_kb
+cost_limit_per_run: 0.5

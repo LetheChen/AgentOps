@@ -1,0 +1,25 @@
+tool_id: mm_image
+name: mm_image
+description: MiniMax CLI 图像生成，支持 --prompt-optimizer 自动优化 prompt
+allowed_domains:
+  - video_production
+handler: cli
+command: mmx image generate --prompt "{prompt}" --out {output} --aspect-ratio 16:9 --prompt-optimizer
+input_schema:
+  type: object
+  properties:
+    prompt:
+      type: string
+      description: 图片生成提示词，英文/中文描述画面内容
+    output:
+      type: string
+      description: 输出图片文件路径，如 assets/scene_01.png
+  required:
+    - prompt
+    - output
+outputs:
+  image_file: "file:{output}"
+permission_required: write
+timeout: 180
+working_dir: "{{workspace.root}}"
+rate_limit: "1/s"

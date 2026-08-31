@@ -1,0 +1,42 @@
+# config/tools/task_rollback.yaml
+# V1 任务管理：任务验收回退（三级别名 / 直接指定目标阶段）
+tool_id: task_rollback
+display_name: 验收回退
+description: |
+  用户决定退回到指定阶段。两种入参（target_status 优先）：
+  1. 三级别名：local → in_progress（执行偏差）/
+     partial → decomposing（拆解错）/
+     global → discussing（方案错）。
+  2. 直接指定 target_status（in_progress/decomposing/discussing/
+     reviewing/backlog/idea 等），走 advance_stage 状态机合法性校验。
+  自动记录 comment_type=review, decision=request_changes 评论。
+  带乐观锁 if_version，冲突返回 version_conflict。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    rollback_target:
+      type: string
+      enum: [local, partial, global]
+      description: 旧别名回退目标级别（与 target_status 二选一）
+    target_status:
+      type: string
+      description: 直接指定目标阶段（in_progress/decomposing/discussing/reviewing/backlog/idea 等），优先于 rollback_target
+    if_version:
+      type: integer
+      description: 乐观锁版本号
+    comment:
+      type: string
+      description: 退回备注（存入 review 评论 body）
+  required: [task_id, if_version]
+handler:
+  module: tools.task_rollback
+  function: task_rollback
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager]
+audit:
+  log_args: true
+  log_result: true

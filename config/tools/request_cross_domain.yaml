@@ -1,0 +1,43 @@
+# config/tools/request_cross_domain.yaml
+tool_id: request_cross_domain
+display_name: 跨域请求
+description: 子 Agent 通过 Manager 中转发起跨域请求
+input_schema:
+  type: object
+  properties:
+    target_domain:
+      type: string
+      enum: [smart_query, smart_ops, smart_approval, smart_form, smart_analysis, personal_assistant, video_production]
+      description: 目标业务域
+    request:
+      type: string
+      description: 跨域请求内容
+    priority:
+      type: string
+      enum: [high, normal, low]
+      description: 请求优先级
+      default: normal
+  required: [target_domain, request]
+handler:
+  module: orchestrator.cross_domain
+  function: request_cross_domain_tool
+  config:
+    timeout_seconds: 600
+    require_manager_relay: true           # 必须经 Manager 中转
+allowed_domains:                          # 所有业务域 + manager 均可用
+  - smart_query
+  - smart_ops
+  - smart_approval
+  - smart_form
+  - smart_analysis
+  - manager
+audit:
+  log_args: true
+  log_result: true
+  events:                                 # 跨域审计事件流
+    - cross_domain.requested
+    - manager.received
+    - manager.dispatched
+    - target.node_started
+    - target.node_completed
+    - manager.returned

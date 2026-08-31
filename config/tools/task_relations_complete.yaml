@@ -1,0 +1,46 @@
+# config/tools/task_relations_complete.yaml
+# P2 分解决策：关系与风险补全（blocks 依赖 + 风险级别 + diff 通知）
+# 设计文档：docs/product-design/DESIGN_task_lifecycle_automation_v1.md §5.5
+tool_id: task_relations_complete
+display_name: 关系风险补全
+description: |
+  分解过程中 agent 评估补全阻断关系（blocks，自带环检测）与风险级别
+  （变更必须带理由）。中低风险静默落库；风险升级到 high 时评论区 @用户 确认。
+input_schema:
+  type: object
+  properties:
+    blocks:
+      type: array
+      items:
+        type: object
+        properties:
+          source:
+            type: string
+            description: 阻塞方任务 ID（完成前 target 不派发）
+          target:
+            type: string
+            description: 被阻塞方任务 ID
+      description: 阻断关系清单（可选）
+    risk_updates:
+      type: array
+      items:
+        type: object
+        properties:
+          task_id:
+            type: string
+          risk_level:
+            type: string
+            enum: [low, medium, high]
+          reason:
+            type: string
+            description: 升级/降级理由（必填）
+      description: 风险级别变更清单（可选）
+handler:
+  module: tools.task_relations_complete
+  function: task_relations_complete
+  config:
+    timeout_seconds: 60
+allowed_domains: [task_management]
+audit:
+  log_args: true
+  log_result: true

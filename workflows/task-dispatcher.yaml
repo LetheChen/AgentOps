@@ -1,0 +1,140 @@
+workflow_id: task-dispatcher
+name: 任务自动派发
+version: 1
+description: |
+  4 步 DAG 版自动派发：scan → gate → dispatch → report
+  扫描 decomposing 就绪任务（叶子 + 依赖就绪 + 风险门禁 low/medium），
+  ε-greedy + 声望加权选择 executor 派发 execute_coding（codex harness）。
+  medium 风险派发后评论区 @用户（知情可召回）；high 风险强制人工确认不自动派发。
+  父任务子任务全部完成时自动推进验收链路（decomposing→in_progress→validating）。
+  
+workspace:
+  root: "workspace/task-dispatcher/{{run_id}}/"
+  structure:
+    reports: reports/
+    data: data/
+layout:
+  nodes:
+    scan:
+      x: 80
+      y: 60
+    gate:
+      x: 360
+      y: 60
+    dispatch:
+      x: 640
+      y: 60
+    report:
+      x: 920
+      y: 60
+inputs:
+  - name: project_id
+    type: string
+    required: false
+    description: "项目过滤（空 = 全项目）"
+nodes:
+  scan:
+    name: 就绪扫描
+    type: agent
+    agent: task_dispatcher
+    business_role: 派发扫描员
+    role_prompt: |
+      你是派发扫描员，负责采集就绪/待审/挂起清单与并发状态。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: []
+    timeout_seconds: 120
+    inputs:
+      - project_id
+    outputs:
+      scan_result:
+        to: "gate.in:scan_result"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  gate:
+    name: 门禁复核
+    type: agent
+    agent: task_dispatcher
+    business_role: 派发判定员
+    role_prompt: |
+      你是派发判定员，负责复核就绪候选并输出 decisions（只能确认或剔除，禁止新增）。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [scan]
+    timeout_seconds: 120
+    inputs:
+      - scan_result
+    outputs:
+      decisions:
+        to: "dispatch.in:decisions"
+      scan_result:
+        to: "report.in:scan_result"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  dispatch:
+    name: 执行派发
+    type: agent
+    agent: task_dispatcher
+    business_role: 派发执行员
+    role_prompt: |
+      你是派发执行员，负责把 decisions 批量提交 task_dispatch_execute 落库派发。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [gate]
+    timeout_seconds: 300
+    inputs:
+      - decisions
+    outputs:
+      dispatch_result:
+        to: "report.in:dispatch_result"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  report:
+    name: 生成调度报告
+    type: agent
+    agent: task_dispatcher
+    business_role: 派发报告员
+    role_prompt: |
+      你是派发报告员，负责汇总本轮派发写入 Markdown 报告并按需推送监控中心。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [dispatch]
+    timeout_seconds: 120
+    inputs:
+      - scan_result
+      - dispatch_result
+    outputs:
+      report_path:
+        to: ""
+    command_config: null
+    await_command_config: null
+    while_config: null
+widgets:
+  - id: w_task_dispatcher_progress
+    type: progress_status
+    title: 派发调度进度
+    emit_on:
+      node: scan
+      event: node.started
+    props:
+      title: 任务自动派发
+      steps:
+        -           id: scan
+                    title: 就绪扫描
+                    node: scan
+        -           id: gate
+                    title: 门禁复核
+                    node: gate
+        -           id: dispatch
+                    title: 执行派发
+                    node: dispatch
+        -           id: report
+                    title: 调度报告
+                    node: report

@@ -1,0 +1,55 @@
+# config/agents/video_creator.yaml
+# v2.1 重组：video_producer → video_creator（按能力域设计，服务 video-pipeline 等视频制作 workflow）
+agent_id: video_creator
+domain: video_production
+display_name: 视频创作 Agent
+description: 从搜索到输出的全流程视频生产（按节点执行，每步调对应工具）
+harness: codex
+# P0.18.10: T3 — 需要 write_file + bash（ffprobe/hyperframes_render）+ 读 workspace
+tier: T3
+model:
+  provider: minimax
+  id: MiniMax-M3
+system_prompt: |
+  你是视频生产节点。任务：根据"当前节点"分支，直接调工具 → finalize。
+
+  严禁 ls / dir / pwd / find。文件路径已知。直接调工具。
+
+  当前节点工具映射：
+  - search → mm_search(query=topic, output={{workspace.root}}data/search-results.md) → finalize
+  - storyboard → read_file search-results → write_file 2 个文件（storyboard.md + narration.md）→ finalize
+  - tts → read_file narration.md → 每个场景 mm_speech(text=旁白句, output=audio/scene-NN.mp3) → bash(ffprobe *mp3) → write_file(audio/durations.json) → finalize
+  - image_gen → read_file storyboard.md → 每个场景 mm_image(prompt=场景描述, output=images/scene-NN.png) → finalize
+  - validate → bash(ffprobe sum durations) → write_file(data/validate_report.md) → finalize
+  - compose → write_file(code/composition.html) 用 hyperframes 模板 → hyperframes_render(html="{{workspace.root}}code/composition.html", output="{{workspace.root}}output.mp4") → finalize
+
+  铁律：不要反复 ls/dir。output.mp4 由 hyperframes_render 工具自动产出。
+
+output_files:
+  search_results: '{{workspace.root}}data/search-results.md'
+  storyboard: '{{workspace.root}}script/storyboard.md'
+  narration: '{{workspace.root}}script/narration.md'
+  audio_dir: '{{workspace.root}}media/audio/'
+  durations_json: '{{workspace.root}}media/audio/durations.json'
+  images_dir: '{{workspace.root}}media/images/'
+  composition_html: '{{workspace.root}}code/composition.html'
+  output_mp4: '{{workspace.root}}output.mp4'
+  validate_report: '{{workspace.root}}data/validate_report.md'
+permissions:
+  allowed_tools:
+  - mm_search
+  - mm_speech
+  - mm_image
+  - query_knowledge
+  - validate_duration
+  - hyperframes_render
+  - read_file
+  - write_file
+  - bash
+  - finalize
+  denied_tools: []
+knowledge_bases:
+- video_production
+max_concurrent_runs: 1
+timeout_seconds: 3600
+cost_limit_per_run: 5

@@ -1,0 +1,35 @@
+# config/tools/approval_query.yaml
+tool_id: approval_query
+display_name: 审批查询
+description: 查询审批单状态、审批历史
+input_schema:
+  type: object
+  properties:
+    approval_id:
+      type: string
+      description: 审批单标识（可选，不填则按条件查询）
+    applicant:
+      type: string
+      description: 申请人
+    status:
+      type: string
+      enum: [pending, approved, rejected, all]
+      description: 审批状态
+    date_from:
+      type: string
+      description: 起始日期
+    date_to:
+      type: string
+      description: 截止日期
+  required: []
+handler:
+  module: tools.oa_tools
+  function: query_approval_status
+  config:
+    max_records: 100
+    timeout_seconds: 15
+allowed_domains:
+  - smart_approval
+audit:
+  log_args: true
+  log_result: true

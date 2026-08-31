@@ -1,0 +1,79 @@
+# config/tools/report_surface_state.yaml
+# 生成式 UI surface state 推送工具 — Agent 主动 emit partial surface snapshot
+# 对应 tools/report_surface_state.py，通过 DagEngine / local_llm harness 调起
+# 调起后 emit REPORT_SURFACE_STATE DagEvent，前端 SupervisionPanel 监听渲染
+# 详见 docs/reconstruction/agentops-v99.5-a2ui-design.md §3.3
+
+tool_id: report_surface_state
+display_name: 生成式 UI surface state 推送
+description: |
+  Agent 在执行期间主动 emit 生成式 UI 面板快照（partial / final），前端 SupervisionPanel
+  按 view_id 路由到对应 A2UI 组件实时渲染。
+  与 NODE_COMPLETED 不同：本工具是 agent 主动 emit，可推多次（started → partial → final 单调推进），
+  而 NODE_COMPLETED 是节点终态一次性 emit。
+
+  校验链：
+  1. view_id 在 actor allowed_surface_views 白名单
+  2. data_model 符合 fields 类型约束
+  3. components 是有效 A2UI 组件树（30+ 组件）
+  4. output_contract 与 view_id 声明一致
+  5. phase 单调推进（per-view 维度）
+  6. surface_id digest pinning 防重复 emit
+input_schema:
+  type: object
+  properties:
+    actor_id:
+      type: string
+      description: "actor ID（必填，从 actor profile 加载 view_id 白名单）"
+    view_id:
+      type: string
+      description: "view ID（必填，必须在 actor allowed_surface_views 白名单）"
+    phase:
+      type: string
+      enum: [started, partial, final, superseded]
+      description: "阶段（必填，单调推进）"
+    components:
+      type: array
+      description: |
+        A2UI 组件树（必填，dict 对象数组，不是 string 数组）。
+        每个元素至少含 id + component 字段，示例：
+          [{"id":"p1","component":"AoProgress","label":"进度","value":50},
+           {"id":"s1","component":"AoSection","title":"标题","children":[]},
+           {"id":"l1","component":"AoList","source":{"path":"/items"},"itemTitlePath":"/title"}]
+        可用组件: AoProgress/AoSection/AoList/AoStatusBadge/AoMetric/AoStep/AoTable/AoTimeline/AoDag/Text 等。
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            description: "组件唯一 ID"
+          component:
+            type: string
+            description: "组件类型（如 AoProgress/AoSection/AoList）"
+        required:
+          - id
+          - component
+    data_model:
+      type: object
+      description: "数据模型（必填，符合 view fields 约束）"
+    surface_properties:
+      type: object
+      description: "可选，{iconUrl, agentDisplayName} 等展示属性"
+    output_contract:
+      type: string
+      description: "可选，绑定的 contract 类别（ActorReport / Mission / Failure / RoundGate）"
+  required:
+    - actor_id
+    - view_id
+    - phase
+    - components
+    - data_model
+handler:
+  module: tools.report_surface_state
+  function: report_surface_state
+allowed_domains:
+  - manager
+  - any_agent_with_visual_profile
+audit:
+  log_args: false       # data_model 可能很大，避免日志爆炸
+  log_result: true

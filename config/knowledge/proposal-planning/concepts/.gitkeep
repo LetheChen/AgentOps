@@ -1,0 +1,3 @@
+# 此目录存放 proposal-planning 域的 concept 页面（设计原则等跨来源概念）
+# 每个 concept 一个 md 文件，例如：design-principles.md
+# query_kb 的 category=concepts 查询会 glob 此目录下所有 .md

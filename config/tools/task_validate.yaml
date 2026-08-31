@@ -1,0 +1,31 @@
+# config/tools/task_validate.yaml
+# V1 任务管理：验收交付物（结构化规则引擎）
+tool_id: task_validate
+display_name: 验收交付物
+description: |
+  结构化验收：对照 acceptance_criteria 逐条判定。
+  规则引擎（非 LLM 主观）：check_type=auto 的用确定性规则（文件存在/hash 匹配/
+  测试通过），无规则引擎时默认 passed；
+  check_type=manual 的发布报告等用户确认。
+  全部 passed 后推进到 closing。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    artifact_ids:
+      type: array
+      items:
+        type: string
+      description: 交付物 ID 列表（可选）
+  required: [task_id]
+handler:
+  module: tools.task_validate
+  function: task_validate
+  config:
+    timeout_seconds: 30
+allowed_domains: [manager]
+audit:
+  log_args: true
+  log_result: true

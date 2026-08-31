@@ -1,0 +1,3 @@
+# 此目录存放 content-curation 域的 entity 页面（关键技术实体）
+# 每个 entity 一个 md 文件，例如：redis.md / agent-harness.md
+# query_kb 的 category=entities 查询会 glob 此目录下所有 .md

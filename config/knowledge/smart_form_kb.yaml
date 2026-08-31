@@ -1,0 +1,20 @@
+# config/knowledge/smart_form_kb.yaml
+kb_id: smart_form_kb
+display_name: 智能填单知识库
+description: 表单模板、字段定义、校验规则
+source:
+  type: vector_store
+  connection: ${KB_SMART_FORM_URL}
+  collection: smart_form_docs
+permissions:
+  read:
+    - smart_form                         # 本域读写
+  write:
+    - smart_form                         # 只有本域能写
+  admin:
+    - smart_form_admin
+content_categories:
+  - form_templates                       # 表单模板
+  - field_definitions                    # 字段定义
+  - validation_rules                     # 校验规则
+retention_days: 365

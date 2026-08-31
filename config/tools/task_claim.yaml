@@ -1,0 +1,30 @@
+# config/tools/task_claim.yaml
+# V1 任务管理：认领任务（claim 协议）
+tool_id: task_claim
+display_name: 认领任务
+description: |
+  认领一个待执行任务（推进到 in_progress）。必须携带 if_version（乐观锁）。
+  规则：backlog 未立项不可认领；in_progress 且绑定其他对话不可抢占；
+  冲突时重读任务+评论后仅重试一次。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    if_version:
+      type: integer
+      description: 当前任务版本号（乐观锁）
+    thread_id:
+      type: string
+      description: 当前对话线程 ID（绑定校验，防抢占）
+  required: [task_id, if_version, thread_id]
+handler:
+  module: tools.task_claim
+  function: task_claim
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager, task_planner, coding_agent]
+audit:
+  log_args: true
+  log_result: true

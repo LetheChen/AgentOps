@@ -1,0 +1,56 @@
+# P0.18 agentops-worker image build context exclude
+# 加速 docker build，避免 bind mount 整个项目根
+
+# 前端构建产物
+web/
+node_modules/
+web/dist/
+
+# Python 缓存与数据
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+audit.db
+audit.db-journal
+audit.db-wal
+audit.db-shm
+
+# 测试与文档（容器内不需要）
+tests/
+docs/
+research/
+*.md
+!docker/agentops-worker/*.md
+
+# 编辑器与 OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI / 部署
+.github/
+.claude/
+deploy/
+.clinerules
+
+# 大文件
+*.log
+*.tmp
+*.lock
+output/
+data/
+logs/
+*.tar.gz
+*.zip
+
+# 其它 docker 镜像配置
+docker/
+!docker/agentops-worker/

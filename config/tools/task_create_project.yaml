@@ -1,0 +1,34 @@
+# config/tools/task_create_project.yaml
+# P0 任务管理：建项目
+tool_id: task_create_project
+display_name: 创建项目
+description: |
+  创建一个新项目（项目是任务的容器）。
+  项目有自己的 identifier 前缀（如 AGENTOPS-1），后续任务按项目编号自增。
+input_schema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: 项目名称（如 AgentOps / 某产品名）
+    type:
+      type: string
+      enum: [code, knowledge, hybrid]
+      default: code
+      description: 项目类型
+    local_path:
+      type: string
+      description: 本地代码路径（可选）
+    workspace_id:
+      type: string
+      description: 工作区 ID（可选，挂接 authorized_workspaces）
+  required: [name]
+handler:
+  module: tools.task_create_project
+  function: task_create_project
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager, task_planner]
+audit:
+  log_args: true
+  log_result: true

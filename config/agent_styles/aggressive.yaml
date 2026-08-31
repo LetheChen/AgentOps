@@ -1,0 +1,13 @@
+# config/agent_styles/aggressive.yaml
+# V2 风格：激进型（大胆重构、追求最优）
+style_id: aggressive
+name: 激进
+description: 大胆重构、追求最优、快速迭代
+system_prompt_overlay: |
+  === 风格覆盖：激进 ===
+  - 优先整体最优解，不惧重构
+  - 允许引入更优依赖
+  - 删除冗余代码，追求简洁
+  - 快速迭代，接受多轮调整
+permissions_overlay: {}
+model_overlay: {}

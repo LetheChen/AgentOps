@@ -1,0 +1,78 @@
+# v2.1 Docker Container Demo DAG
+# 验证 DAG node agent 在 Docker 容器中的完整生命周期
+# 流程：fetch（docker_container）→ think（in_process）→ report（in_process）
+# fetch 节点用 conversational harness + docker_container placement
+# 验证：
+#   - 容器从启动到退出（provisioner 5 步启动）
+#   - run 结束后容器被析构（provisioner 4 步销毁）
+#   - sandbox 目录被标记延迟清理（patroller 30 天后清理）
+
+workflow_id: docker-container-demo
+name: Docker Container Demo DAG
+version: 1.0
+description: |
+  Docker 容器生命周期 E2E：fetch 节点在 docker_container 中运行，
+  验证 provisioner 5 步启动（build mounts → build labels → build env →
+  create+start container → wait WS register）+ 4 步销毁（graceful stop →
+  kill（按需）→ remove → verify + sandbox 延迟清理标记）。
+
+inputs:
+  - name: topic
+    type: string
+    required: true
+    default: "Docker Container Lifecycle Test"
+
+nodes:
+  fetch:
+    name: 数据采集（docker 容器）
+    type: agent
+    inline_agent:
+      harness: codex
+      model: minimax/MiniMax-M3
+      role_prompt: |
+        你是一个数据采集员，回复 fetch 节点的标准输出：
+        echo "{topic}"
+    business_role: 数据采集员
+    harness: codex
+    runtime_placement: docker_container
+    config:
+      runtime_image: agentops-worker:latest
+    after: []
+    inputs: [topic]
+    outputs:
+      fetched:
+        to: "think.in:fetched"
+
+  think:
+    name: 思考分析（本地进程）
+    type: agent
+    inline_agent:
+      harness: codex
+      model: minimax/MiniMax-M3
+      role_prompt: |
+        你是一个分析员，对 fetched 数据做一句总结。
+    business_role: 分析专员
+    harness: codex
+    runtime_placement: in_process
+    after: [fetch]
+    inputs: [topic, fetched]
+    outputs:
+      thought:
+        to: "report.in:thought"
+
+  report:
+    name: 输出报告（本地进程）
+    type: agent
+    inline_agent:
+      harness: codex
+      model: minimax/MiniMax-M3
+      role_prompt: |
+        你是一个报告员，对 thought 给出一句话总结。
+    business_role: 报告撰写员
+    harness: codex
+    runtime_placement: in_process
+    after: [think]
+    inputs: [topic, thought]
+    outputs:
+      done:
+        to: ""

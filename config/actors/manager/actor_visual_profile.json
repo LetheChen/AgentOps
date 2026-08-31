@@ -1,0 +1,35 @@
+{
+  "actor_id": "manager",
+  "description": "Manager 会话：对话过程中向 Supervision 面板推送生成式 UI surface（present_content_surface 工具，高层语义映射 A2UI）",
+  "allowed_surface_views": [
+    {
+      "view_id": "manager-live",
+      "output_contract": "ConversationReport",
+      "description": "Manager 对话实时面板 — 表格/图表/指标/进度/时间线等业务内容展示（components 由 present_content_surface 按 content_type 生成）",
+      "required_phases": ["started", "partial", "final"],
+      "fields": {
+        "title": {
+          "type": "string",
+          "required": true,
+          "max_length": 200
+        },
+        "progress": {
+          "type": "integer",
+          "required": false,
+          "min": 0,
+          "max": 100
+        },
+        "primary_tone": {
+          "type": "enum",
+          "required": false,
+          "values": ["neutral", "info", "positive", "warning", "critical"]
+        },
+        "summary": {
+          "type": "string",
+          "required": false,
+          "max_length": 500
+        }
+      }
+    }
+  ]
+}

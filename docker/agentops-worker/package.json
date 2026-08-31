@@ -1,0 +1,11 @@
+{
+  "name": "agentops-worker-bridge",
+  "version": "0.1.0",
+  "description": "codex app-server + node-bridge WS server for AgentOps",
+  "private": true,
+  "dependencies": {
+    "@openai/codex": "0.144.5",
+    "@openai/codex-linux-x64": "npm:@openai/codex@0.144.5-linux-x64",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,37 @@
+# config/tools/read_skill.yaml
+# Phase 2: read_skill 工具——让 LLM 按需加载 skill 完整 body
+# 设计动机：skill metadata（id + description）已注入 system_prompt，
+# 但完整 body（可能 1-5KB）不全量 inline（节省 token）。
+# LLM 看到需要的 skill 时调本工具加载完整内容。
+tool_id: read_skill
+display_name: 读取 Skill 内容
+description: |
+  读取一个 Skill 的完整内容（按需加载，不全量注入 system_prompt）。
+  skill 列表 metadata 已在 system_prompt 的「## 可用 Skill」段展示，
+  当你需要某个 skill 的详细操作指引时调本工具加载完整 body。
+  常见场景：用户要求生成 workflow → 调 read_skill('workflow-author') 学规范；
+  用户要求选择 DAG 拓扑 → 调 read_skill('dag-patterns') 看模式指南。
+input_schema:
+  type: object
+  properties:
+    skill_id:
+      type: string
+      description: Skill ID（如 "dag-ops" / "workflow-author" / "dag-patterns" / "generative-ui" / "_shared"）
+  required: [skill_id]
+handler:
+  module: tools.skill_tools
+  function: read_skill
+  config:
+    timeout_seconds: 5
+allowed_domains:
+  - manager
+  - smart_query
+  - smart_ops
+  - smart_approval
+  - smart_form
+  - smart_analysis
+  - video_production
+  - personal_assistant
+audit:
+  log_args: true
+  log_result: false   # skill body 可能较长，不入审计日志

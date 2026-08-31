@@ -1,0 +1,3 @@
+# 此目录存放 content-curation 域的 comparison 页面（来源间矛盾对比）
+# 每个 comparison 一个 md 文件，例如：redis-version.md
+# query_kb 的 category=comparisons 查询会 glob 此目录下所有 .md

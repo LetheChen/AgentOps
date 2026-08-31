@@ -1,0 +1,205 @@
+# workflows/content-curation.yaml
+# 内容策展工作流（入口 B：草稿仓库扫描） — 3 节点 DAG
+# v99 P0.5 改造：3 节点都用 inline_agent 自包含角色定义，无全局 content_curator agent
+#
+# 节点拆分：scan_drafts → evaluate → archive
+# 节点级 harness 配置：scan_drafts/archive 走 M2.7-highspeed（快省，工具调用为主）
+#                      evaluate 走 M3（判断 + 评估质量更高）
+#
+# 入口 A（URL 提取）走 conversational 模式，不使用此 workflow
+# 运行时产物存放在 workspace/content-curation/{run_id}/ 下
+
+workflow_id: content-curation
+name: 内容策展
+version: 2.0
+description: |
+  3 步 DAG 版内容策展（入口 B）：scan_drafts → evaluate → archive
+  扫描草稿仓库增量文档，价值评估 + 冲突检测 + 归档 + 沉淀。
+  P0.5 改造：每个节点 inline_agent 自包含 role_prompt + harness + model + allowed_tools。
+  入口 A（URL 提取）走 conversational 模式，不使用此 workflow。
+
+# workspace 配置
+workspace:
+  root: "workspace/content-curation/{{run_id}}/"
+  structure:
+    data: "data/"
+    reports: "reports/"
+
+inputs:
+  - name: draft_path
+    type: string
+    required: false
+    default: "草稿仓库/"
+    description: |
+      草稿仓库相对路径（vault 内，默认 E:\Document\草稿仓库\）
+  - name: since
+    type: string
+    required: false
+    description: |
+      起始时间（ISO 8601，如 2026-07-01T00:00:00+08:00）
+      不传则扫所有未处理文档（基于 frontmatter.ingested_at 判断）
+
+nodes:
+  # ── Step 1: 扫描草稿（local_llm + M2.7-highspeed，工具调用为主）──
+  scan_drafts:
+    name: 扫描草稿
+    type: agent
+    business_role: 草稿扫描员
+    inline_agent:
+      role_prompt: |
+        你是草稿扫描员，负责扫描草稿仓库增量文档，返回未处理文档列表。
+
+        执行步骤：
+        1. 必须真实调用 scan_drafts 工具：
+           参数 {since: "{{since}}", draft_root: "{{draft_path}}", max_results: 50}
+        2. 把工具返回的 new_drafts 列表整理为结构化 JSON
+        3. 调用 write_file 工具把 JSON 写入 {{workspace.root}}data/drafts-list.json
+        4. 调用 handoff 传 drafts_list 端口（内容=JSON 字符串，summary="扫描到 N 个未处理草稿"）
+
+        铁律：
+        - 必须真实调用 scan_drafts 工具，禁止只 thinking
+        - 写文件必须用 write_file 工具，禁止用 bash heredoc
+      harness: local_llm
+      model: minimax/MiniMax-M2.7-highspeed
+      allowed_tools: [scan_drafts, obsidian_vault, read_file, write_file, finalize]
+    after: []
+    timeout_seconds: 60
+    inputs:
+      - draft_path
+      - since
+    outputs:
+      drafts_list:
+        to: "evaluate.in:drafts_list"
+
+  # ── Step 2: 评估 + 检测（local_llm + M3，5 维度评估 + 冲突判定）──
+  evaluate:
+    name: 评估 + 检测
+    type: agent
+    business_role: 内容评估员
+    inline_agent:
+      role_prompt: |
+        你是内容评估员，负责对每个 draft 做 5 维度价值评估 + 4 类冲突检测。
+
+        【5 维度价值评估规则】
+        一、正确性：论述是否与公认事实/行业共识一致？（对照知识库已有概念页/实体页）
+        二、时效性：是否过时？技术栈/版本/数据是否最新？（检查发表日期、引用版本）
+        三、价值度：是否提供新知？是否与用户工作相关？（用户工作：信息化/数字化/智能化建设）
+        四、深度：是科普还是有实操细节？（字数/代码量/案例数）
+        五、可执行性：读完能否立即应用？（是否有 step-by-step/配置示例）
+
+        【S/A/B/C 价值等级判定矩阵】
+        S 高价值：5 维度全 A+，与用户工作强相关 → action=archive_with_comparison
+        A 有价值：3-4 维度 A，与用户工作相关 → action=archive_with_note
+        B 一般：2-3 维度 A，相关性弱 → action=archive
+        C 低价值/过时：1 维度 A 以下 / 严重过时 → action=discard
+
+        【4 类冲突检测规则】
+        1. 提取新内容的关键实体/概念（最多 3 个）
+        2. 调 query_kb(domain="content-curation", category="entities", query="<实体>") 查历史笔记
+        3. 命中 → 调 lint_knowledge(domain="content-curation", new_content=<摘要>) 检测冲突
+        4. 你判定冲突类型（fact/version/opinion/complement）+ confidence
+        5. confidence >= 0.7 才报告冲突
+
+        【铁律：obsidian_vault 调用次数限制】（避免请求体爆炸）
+        - obsidian_vault.read_file 单轮最多调 1 次（只读当前 draft 的 md 内容）
+        - 严禁一次性把多个 draft 内容塞进同一轮 LLM 请求
+        - 多 draft 评估按顺序逐个处理：读 1 篇 → 评估 → 写结果 → 读下一篇
+
+        执行步骤：
+        1. 读取 handoff 字段 drafts_list（JSON 字符串）
+        2. 对每个 draft 逐个执行：
+           a. md 文件 → 调 obsidian_vault.read_file
+           b. pdf/doc/音视频 → 调 extract_content
+           c. 提取关键实体/概念
+           d. 调 query_kb 查历史
+           e. 调 lint_knowledge 检测冲突
+           f. 你判定冲突类型 + confidence + value_level + action
+           g. 把结果 append 到 evaluations
+        3. 所有 draft 评估完成后，输出结构化 JSON
+        4. 调用 write_file 把 JSON 写入 {{workspace.root}}data/evaluations.json
+        5. 调用 handoff 传 evaluations 端口
+      harness: local_llm
+      model: minimax/MiniMax-M3
+      allowed_tools: [obsidian_vault, extract_content, query_kb, lint_knowledge, read_file, write_file, finalize]
+    after: [scan_drafts]
+    timeout_seconds: 600
+    inputs:
+      - drafts_list
+    outputs:
+      evaluations:
+        to: "archive.in:evaluations"
+
+  # ── Step 3: 归档 + 沉淀（local_llm + M2.7-highspeed，工具调用为主）──
+  archive:
+    name: 归档 + 沉淀
+    type: agent
+    business_role: 归档沉淀员
+    inline_agent:
+      role_prompt: |
+        你是归档沉淀员，负责对每个 evaluation 调 obsidian_vault.write_file 归档 + ingest_source 沉淀。
+
+        执行步骤（严格按顺序）：
+        1. 读取 handoff 字段 evaluations（JSON 数组）
+        2. 对每个 evaluation：
+           a. 必须真实调用 obsidian_vault.write_file（铁律）：
+              参数 {action: "write_file", path: "<target_route>/<title>.md",
+              content: <summary_markdown>, frontmatter: {type, source_url, source_path, title, author, published, value_level, action, conflict_with, conflict_type, tags}}
+           b. 必须真实调用 ingest_source：
+              参数 {domain: "content-curation", source_content: <summary_markdown>,
+              source_meta: {url, source_path, title, author, published, value_level, conflict_type},
+              page_type: "source", target_pages: [...]}
+        3. 输出结构化 JSON
+        4. 写入 {{workspace.root}}data/archive-paths.json
+        5. 调用 handoff
+        6. 归档完成后立即调 finalize 结束本轮
+
+        全局提醒：
+        - fact/opinion 冲突必须等用户确认，不自动归档
+        - version/complement 冲突可自动归档 + 建对比页
+        - 所有工具调用必须真调，不允许只 thinking
+      harness: local_llm
+      model: minimax/MiniMax-M2.7-highspeed
+      allowed_tools: [obsidian_vault, ingest_source, read_file, write_file, finalize]
+    after: [evaluate]
+    timeout_seconds: 180
+    inputs:
+      - evaluations
+    outputs:
+      archive_paths:
+        to: ""   # 终端节点
+      kb_ingest_results:
+        to: ""   # 终端节点
+
+# ── Widget 实时可视化 ──────────────────────────────────────────
+widgets:
+  # progress widget：scan_drafts 节点 started 时 emit 一次（初始化），
+  # 此后每个节点完成时 engine 自动 emit 一次 progress_status（实时更新所有 step 状态）
+  - id: w_curation_progress
+    type: progress_status
+    title: 内容策展进度
+    emit_on:
+      node: scan_drafts
+      event: node.started
+    props:
+      title: 内容策展
+      steps:
+        - id: scan_drafts
+          title: 扫描草稿
+          node: scan_drafts
+        - id: evaluate
+          title: 评估 + 检测
+          node: evaluate
+        - id: archive
+          title: 归档 + 沉淀
+          node: archive
+
+  # artifact_ref widget：archive 节点 completed 时 emit 归档路径列表
+  - id: w_curation_results
+    type: artifact_ref
+    title: 策展产物
+    emit_on:
+      node: archive
+      event: node.completed
+    props:
+      path: "{{workspace.root}}data/archive-paths.json"
+      format: json

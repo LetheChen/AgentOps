@@ -1,0 +1,25 @@
+# config/domains/personal_assistant.yaml
+domain: personal_assistant
+display_name: 个人助理域
+description: 三个个人助理 agent（周报助手 / 方案策划 / 内容策展）共享域，访问 Obsidian vault + 知识库管理
+default_harness: local_llm
+default_model: minimax/MiniMax-M3
+default_permissions:
+  allowed_tools:                           # 域级默认允许
+    - obsidian_vault                        # Layer A：vault 访问
+    - ingest_source                         # Layer B：知识库 Ingest
+    - query_knowledge                       # Layer B：知识库 Query
+    - read_file                             # 内置：读 workspace 文件
+    - write_file                            # 内置：写 workspace 中间产物
+    - finalize                              # 内置：节点结束
+  denied_tools:                             # 域级硬禁止（agent 不可覆盖）
+    - sql_query                             # 个人助理不直接查业务库
+    - sql_execute                           # 个人助理不改业务数据
+    - server_restart                        # 个人助理不重启服务器
+    - ssh_exec                              # 个人助理不执行 SSH
+    - db_migrate                            # 个人助理不做数据库迁移
+    - wecom_notify                          # 个人助理不推企业微信（告警专属）
+    - log_query                             # 个人助理不查日志（巡检专属）
+    - trigger_workflow                      # 个人助理不触发其他 workflow（避免循环）
+default_knowledge_bases: []                 # 个人助理用 ingest_source/query_knowledge 直连 config/knowledge/，不走 kb 抽象层
+cost_limit_per_run: 1.0

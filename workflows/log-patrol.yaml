@@ -1,0 +1,164 @@
+workflow_id: log-patrol
+name: 日志巡检
+version: 2
+description: |
+  4 步 DAG 版日志巡检：scan → analyze → report → notify
+  支持手动触发、定时触发、Manager 调度三种方式。
+  所有节点共享 log_patrol agent，按 {{node_id}} 路由到对应步骤。
+  
+workspace:
+  root: "workspace/log-patrol/{{run_id}}/"
+  structure:
+    reports: reports/
+layout:
+  nodes:
+    scan:
+      x: 80
+      y: 60
+    analyze:
+      x: 360
+      y: 60
+    report:
+      x: 640
+      y: 60
+    notify:
+      x: 920
+      y: 60
+inputs:
+  - name: log_source_id
+    type: string
+    required: false
+    description: 日志源 ID（白名单授权，对应 config/patrol.yaml 的 log_sources.id，如 seeyon/nginx/redis）。优先于 log_dir
+  - name: log_dir
+    type: string
+    required: false
+    description: 日志根目录路径（直接指定路径时使用，其下子目录按业务系统分类，如 seeyon/、nginx/、redis/）。未授权路径会被拒绝
+  - name: time_range
+    type: string
+    required: false
+    default: 24h
+    description: 扫描时间范围（如 1h/24h/7d，默认 24h）
+  - name: level
+    type: string
+    required: false
+    default: ERROR
+    description: "日志级别过滤: ERROR / WARN / FATAL（默认 ERROR）"
+nodes:
+  scan:
+    name: 扫描日志
+    type: agent
+    agent: log_analyst
+    business_role: 数据采集员
+    role_prompt: |
+      你是数据采集员，负责扫描日志源采集错误日志。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: []
+    timeout_seconds: 120
+    inputs:
+      - log_source_id
+      - log_dir
+      - time_range
+      - level
+    outputs:
+      scan_result:
+        to: "analyze.in:scan_result"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  analyze:
+    name: 分析异常
+    type: agent
+    agent: log_analyst
+    business_role: 异常分析员
+    role_prompt: |
+      你是异常分析员，负责基于扫描结果判定 4 类重大问题。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [scan]
+    timeout_seconds: 180
+    inputs:
+      - scan_result
+    outputs:
+      critical_issues:
+        to: "report.in:critical_issues"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  report:
+    name: 生成报告
+    type: agent
+    agent: log_analyst
+    business_role: 报告撰写员
+    role_prompt: |
+      你是报告撰写员，负责将分析结果写入 Markdown 报告。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [analyze]
+    timeout_seconds: 120
+    inputs:
+      - critical_issues
+    outputs:
+      report_path:
+        to: "notify.in:report_path"
+      critical_summary:
+        to: "notify.in:critical_summary"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  notify:
+    name: 推送告警
+    type: agent
+    agent: log_analyst
+    business_role: 告警通知员
+    role_prompt: |
+      你是告警通知员，负责根据分析结果决定是否推送企业微信告警。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [report]
+    timeout_seconds: 120
+    inputs:
+      - critical_summary
+      - report_path
+    outputs:
+      notify_result:
+        to: ""
+    skip_if: "{{not report.critical_summary}}"
+    command_config: null
+    await_command_config: null
+    while_config: null
+widgets:
+  - id: w_patrol_progress
+    type: progress_status
+    title: 巡检进度
+    emit_on:
+      node: scan
+      event: node.started
+    props:
+      title: 日志巡检
+      steps:
+        -           id: scan
+                    title: 扫描日志
+                    node: scan
+        -           id: analyze
+                    title: 分析异常
+                    node: analyze
+        -           id: report
+                    title: 生成报告
+                    node: report
+        -           id: notify
+                    title: 推送告警
+                    node: notify
+  - id: w_patrol_report
+    type: artifact_ref
+    title: 巡检报告
+    emit_on:
+      node: report
+      event: node.completed
+    props:
+      path: "{{report.report_path}}"
+      format: markdown

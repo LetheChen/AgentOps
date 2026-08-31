@@ -1,0 +1,31 @@
+# config/tools/task_conductor_scan.yaml
+# v2.2 任务调度：task_conductor 定时扫描（只读，判定逻辑 100% 确定性）
+# 设计文档：docs/product-design/task-manage/DESIGN_task_management_module.md §4.10.3
+tool_id: task_conductor_scan
+display_name: 任务调度扫描
+description: |
+  扫描任务表，返回五类清单（归档候选/解除阻塞候选/卡死任务/长期未处理 idea/建议开工任务）。
+  纯只读，无任何写操作。判定阈值可传参覆盖（默认 30 天归档 / 7 天卡死）。
+input_schema:
+  type: object
+  properties:
+    project_id:
+      type: string
+      description: 项目过滤（空 = 全项目，可选）
+    inactive_days:
+      type: integer
+      default: 30
+      description: 不活跃归档阈值（天，可选）
+    stuck_days:
+      type: integer
+      default: 7
+      description: 卡死/催熟判定阈值（天，可选）
+handler:
+  module: tools.task_conductor_scan
+  function: task_conductor_scan
+  config:
+    timeout_seconds: 30
+allowed_domains: [task_management]
+audit:
+  log_args: true
+  log_result: true

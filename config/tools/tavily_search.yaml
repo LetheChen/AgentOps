@@ -1,0 +1,76 @@
+# config/tools/tavily_search.yaml
+# Tavily Search API 工具注册 —— 把 Tavily 包装为 AgentOps 平台级联网研究工具
+# 设计动机：docs/reconstruction/DAG Workflow 规范与实现与skills业务关系.md §7.1
+#   把通用「联网研究段落」从单个 workflow 抽出为 L1 平台级 skill
+# 实现：tools/tavily_search.py（urllib 调用 https://api.tavily.com/search）
+# Skill 文档：skills/tavily-search/SKILL.md
+tool_id: tavily_search
+display_name: Tavily 联网搜索
+description: |
+  联网研究工具——调用 Tavily Search API 获取实时网页信息。
+  适用于行业研究、竞品分析、新闻监控、技术调研、事实核查等场景。
+  工具读取环境变量 TAVILY_API_KEY（缺失时返回 ok=false + error=missing_api_key）。
+  返回结构：{ok, query, answer?, results[{title, url, content, score}], result_count}
+  失败时返回 {ok: false, error: "missing_api_key|network_error|http_error|rate_limited|parse_error", detail}
+  详细调用纪律见 skills/tavily-search/SKILL.md。
+input_schema:
+  type: object
+  properties:
+    query:
+      type: string
+      description: 搜索关键词（自然语言问句，中英文皆可）
+    max_results:
+      type: integer
+      minimum: 1
+      maximum: 20
+      default: 5
+      description: 返回结果数（1-20），按相关度排序
+    search_depth:
+      type: string
+      enum: [basic, advanced]
+      default: basic
+      description: basic（快，标题+摘要）/ advanced（慢，含正文，token 计费翻倍）
+    topic:
+      type: string
+      enum: [general, news]
+      default: general
+      description: general（通用网页）/ news（新闻源，配 days 限定窗口）
+    days:
+      type: integer
+      minimum: 1
+      maximum: 365
+      description: 仅 topic=news 生效，限定最近 N 天
+    include_answer:
+      type: boolean
+      default: false
+      description: true 时 Tavily 直接给一句话汇总答案（节约下游 LLM 整理成本）
+    include_domains:
+      type: array
+      items: {type: string}
+      description: 白名单域名（精确匹配，如 ["anthropic.com"]）
+    exclude_domains:
+      type: array
+      items: {type: string}
+      description: 黑名单域名（如 ["reddit.com", "quora.com"]）
+  required: [query]
+handler:
+  module: tools.tavily_search
+  function: tavily_search
+  config:
+    timeout_seconds: 30   # Tavily 默认响应 <5s，advanced 模式抓正文可能到 20s，留 30s 余量
+allowed_domains:
+  - manager
+  - smart_query
+  - smart_ops
+  - smart_approval
+  - smart_form
+  - smart_analysis
+  - research
+  - weekly_report
+  - proposal_planning
+  - content_curation
+  - video_production
+  - personal_assistant
+audit:
+  log_args: true    # query 有审计意义（避免重复搜索 + 排查问题），但注意 PII 风险
+  log_result: false # 搜索结果可能很大（advanced 模式动辄 100KB+），不污染 audit.db

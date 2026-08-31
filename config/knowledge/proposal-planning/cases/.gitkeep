@@ -1,0 +1,3 @@
+# 此目录存放 proposal-planning 域的 case 页面（方案案例）
+# 每个 case 一个 md 文件，例如：oa-upgrade.md
+# query_kb 的 category=cases 查询会 glob 此目录下所有 .md

@@ -1,0 +1,193 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: #0b0f14;
+  color: #e5e9f0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+}
+
+.app {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0b0f14;
+  border-right: 1px solid #1f2731;
+}
+
+.workspace-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #1f2731;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workspace-header h1 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.widget-panel {
+  width: 360px;
+  background: #11161d;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.widget-panel h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ba4b1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.widget {
+  background: #1a212b;
+  border: 1px solid #2a3340;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.widget-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #e5e9f0;
+}
+
+.widget-empty {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.widget-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.widget-item.completed {
+  color: #6b7280;
+  text-decoration: line-through;
+}
+
+.widget-item.pending {
+  color: #fbbf24;
+}
+
+.widget-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.widget-step.active {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+.widget-step.done {
+  color: #6ee7b7;
+  text-decoration: line-through;
+}
+
+.widget-step.pending {
+  color: #6b7280;
+}
+
+.widget-artifact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #11161d;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.widget-memo {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 2px solid #2a3340;
+}
+
+.timeline-event {
+  font-size: 12px;
+  color: #9ba4b1;
+  padding: 4px 0;
+}
+
+/* ====== P1: DAG 节点/边动画 ====== */
+
+@keyframes dag-node-pulse {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(59, 130, 246, 0.9);
+  }
+}
+
+@keyframes dag-dot-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes dag-edge-flow {
+  to {
+    stroke-dashoffset: -9;
+  }
+}
+
+/* P1: HtmlWidget 徽章 */
+.widget-card-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}

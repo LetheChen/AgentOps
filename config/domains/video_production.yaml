@@ -1,0 +1,25 @@
+# config/domains/video_production.yaml
+domain: video_production
+display_name: 视频生产域
+description: AI 视频生产全流程（搜索→分镜→语音→图像→合成→渲染）
+default_harness: codex
+default_model: auto
+default_permissions:
+  allowed_tools:                         # 域级默认允许
+    - mm_search
+    - mm_speech
+    - mm_image
+    - query_knowledge
+    - validate_duration
+    - hyperframes_render
+  denied_tools:                          # 域级硬禁止（agent 不可覆盖）
+    - sql_query
+    - sql_execute
+    - server_restart
+    - db_migrate
+    - ssh_exec
+    - submit_form
+    - approval_flow
+default_knowledge_bases:
+  - video_production
+cost_limit_per_run: 5.0

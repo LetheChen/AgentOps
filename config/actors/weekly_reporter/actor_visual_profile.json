@@ -1,0 +1,168 @@
+{
+  "actor_id": "weekly_reporter",
+  "description": "周报助手：3 阶段流水线（collect_classify → grade_summarize → archive），每阶段 emit 独立 view_id 的 A2UI surface snapshot",
+  "allowed_surface_views": [
+    {
+      "view_id": "collect-live",
+      "output_contract": "ActorReport",
+      "description": "解析合集 + 5 维分类实时面板 — AoProgress 0-33%",
+      "required_phases": ["started", "partial", "final"],
+      "fields": {
+        "title": {
+          "type": "string",
+          "required": true,
+          "max_length": 80
+        },
+        "progress": {
+          "type": "integer",
+          "required": true,
+          "min": 0,
+          "max": 100
+        },
+        "items_collected": {
+          "type": "integer",
+          "required": true,
+          "min": 0
+        },
+        "classified_count": {
+          "type": "integer",
+          "required": false,
+          "min": 0
+        },
+        "value_level_hint": {
+          "type": "string",
+          "required": false,
+          "max_length": 40
+        },
+        "primary_tone": {
+          "type": "enum",
+          "required": true,
+          "values": ["neutral", "info", "positive", "warning", "critical"]
+        }
+      },
+      "template": [
+        {"id": "root", "component": "Column", "children": ["badge", "bar", "grid", "hint"]},
+        {"id": "badge", "component": "AoStatusBadge", "text": "$title", "tone": "$primary_tone"},
+        {"id": "bar", "component": "AoProgress", "label": "采集进度", "value": "$progress"},
+        {"id": "grid", "component": "AoGrid", "children": ["m_items", "m_classified"], "columns": {"default": 2}},
+        {"id": "m_items", "component": "AoMetric", "label": "已采集", "value": "$items_collected", "unit": "条"},
+        {"id": "m_classified", "component": "AoMetric", "label": "已分类", "value": "$classified_count", "unit": "条"},
+        {"id": "hint", "component": "AoDisclosure", "title": "价值等级提示", "children": ["hint_text"]},
+        {"id": "hint_text", "component": "Text", "text": "$value_level_hint"}
+      ]
+    },
+    {
+      "view_id": "grade-live",
+      "output_contract": "ActorReport",
+      "description": "S/A/B/C 终判 + markdown 生成实时面板 — AoProgress 33-66%",
+      "required_phases": ["started", "partial", "final"],
+      "fields": {
+        "title": {
+          "type": "string",
+          "required": true,
+          "max_length": 80
+        },
+        "progress": {
+          "type": "integer",
+          "required": true,
+          "min": 0,
+          "max": 100
+        },
+        "graded_count": {
+          "type": "integer",
+          "required": true,
+          "min": 0
+        },
+        "s_count": {
+          "type": "integer",
+          "required": false,
+          "min": 0
+        },
+        "a_count": {
+          "type": "integer",
+          "required": false,
+          "min": 0
+        },
+        "b_count": {
+          "type": "integer",
+          "required": false,
+          "min": 0
+        },
+        "c_count": {
+          "type": "integer",
+          "required": false,
+          "min": 0
+        },
+        "self_check_passed": {
+          "type": "boolean",
+          "required": false
+        },
+        "primary_tone": {
+          "type": "enum",
+          "required": true,
+          "values": ["neutral", "info", "positive", "warning", "critical"]
+        }
+      },
+      "template": [
+        {"id": "root", "component": "Column", "children": ["badge", "bar", "grid"]},
+        {"id": "badge", "component": "AoStatusBadge", "text": "$title", "tone": "$primary_tone"},
+        {"id": "bar", "component": "AoProgress", "label": "评级进度", "value": "$progress"},
+        {"id": "grid", "component": "AoGrid", "children": ["m_graded", "m_s", "m_a", "m_b", "m_c"], "columns": {"default": 3}},
+        {"id": "m_graded", "component": "AoMetric", "label": "已评级", "value": "$graded_count", "unit": "条"},
+        {"id": "m_s", "component": "AoMetric", "label": "S 级", "value": "$s_count", "unit": "条"},
+        {"id": "m_a", "component": "AoMetric", "label": "A 级", "value": "$a_count", "unit": "条"},
+        {"id": "m_b", "component": "AoMetric", "label": "B 级", "value": "$b_count", "unit": "条"},
+        {"id": "m_c", "component": "AoMetric", "label": "C 级", "value": "$c_count", "unit": "条"}
+      ]
+    },
+    {
+      "view_id": "archive-live",
+      "output_contract": "ActorReport",
+      "description": "归档 + 知识库沉淀实时面板 — AoProgress 66-100%",
+      "required_phases": ["started", "partial", "final"],
+      "fields": {
+        "title": {
+          "type": "string",
+          "required": true,
+          "max_length": 80
+        },
+        "progress": {
+          "type": "integer",
+          "required": true,
+          "min": 0,
+          "max": 100
+        },
+        "archive_path": {
+          "type": "string",
+          "required": false,
+          "max_length": 240
+        },
+        "ingest_count": {
+          "type": "integer",
+          "required": false,
+          "min": 0
+        },
+        "kb_target": {
+          "type": "string",
+          "required": false,
+          "max_length": 80
+        },
+        "primary_tone": {
+          "type": "enum",
+          "required": true,
+          "values": ["neutral", "info", "positive", "warning", "critical"]
+        }
+      },
+      "template": [
+        {"id": "root", "component": "Column", "children": ["badge", "bar", "m_ingest", "path", "kb"]},
+        {"id": "badge", "component": "AoStatusBadge", "text": "$title", "tone": "$primary_tone"},
+        {"id": "bar", "component": "AoProgress", "label": "归档进度", "value": "$progress"},
+        {"id": "m_ingest", "component": "AoMetric", "label": "已入库", "value": "$ingest_count", "unit": "条"},
+        {"id": "path", "component": "AoDisclosure", "title": "归档路径", "children": ["path_text"]},
+        {"id": "path_text", "component": "Text", "text": "$archive_path"},
+        {"id": "kb", "component": "AoDisclosure", "title": "知识库目标", "children": ["kb_text"]},
+        {"id": "kb_text", "component": "Text", "text": "$kb_target"}
+      ]
+    }
+  ]
+}

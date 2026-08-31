@@ -1,0 +1,3 @@
+# 此目录存放 content-curation 域的 raw 原始素材（不可变层）
+# 文件名格式：YYYYMMDD_HHMMSS_<sha256前8>.md
+# 由 ingest_source 工具自动写入，不要手动编辑

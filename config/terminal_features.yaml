@@ -1,0 +1,47 @@
+# config/terminal_features.yaml
+# Coding Agent 原生终端执行（DESIGN_terminal_native_execution.md §4）TUI 特征库
+#
+# 用途：claude/codex CLI 版本升级后 TUI 文案可能变化，导致 ready/trust/working
+# 特征匹配失效。特征集中在此文件维护，改后无需改代码（懒加载，重启服务生效）。
+# 未配置的字段自动使用 task/terminal_exec.py 内置默认值。
+#
+# 修改后需重启服务才生效（不做热加载）
+
+# ── CLI 启动命令 ────────────────────────────────────────────
+# launch_cmd: conpty_host 后端 create_session 的 command（原生 TUI 直跑）
+# launch_cli: psmux/tmux 后端在 shell 里 send_keys 启动的 CLI 名
+launch_cmd:
+  claude_code: ["cmd.exe", "/q", "/d", "/c", "claude"]
+  codex: ["cmd.exe", "/q", "/d", "/c", "codex"]
+launch_cli:
+  claude_code: "claude"
+  codex: "codex"
+
+# ── TUI 特征（pane 内容包含任一特征即命中，大小写不敏感）─────
+# ready_hints:  首帧特征（出现即视为 TUI 就绪可注入指令）
+# trust_hints:  trust 弹窗特征（出现先 send Enter 确认，否则卡死）
+# working_hints: 工作中特征（出现说明 agent 仍在干活，不判完成）
+ready_hints:
+  claude_code: ["? for shortcuts", "? shortcut"]
+  codex: ["Ask Codex", "TRUST", "codex"]
+trust_hints:
+  claude_code: ["trust the files in this folder", "Do you trust"]
+  codex: ["trust this folder", "Trust this directory"]
+working_hints:
+  claude_code: ["esc to interrupt", "✳", "esc interrupt"]
+  codex: ["esc to interrupt", "Thinking", "Working"]
+
+# ── 驱动时序参数 ────────────────────────────────────────────
+# ready_timeout_s:      ready 检测超时（超时仍注入指令，记 warning）
+# monitor_timeout_s:    完成监测超时（超时不强转状态，任务保留 in_progress）
+# monitor_interval_s:   监测轮询间隔
+# monitor_stable_n:     内容稳定判定（连续 N 次轮询 pane 无变化 = 空闲）
+# flush_wait_s:         transcript 写完盘的等待（完成 → 提取 之间）
+# transcript_since_slack_s: transcript mtime 定位窗口的下界前移量
+timeouts:
+  ready_timeout_s: 30
+  monitor_timeout_s: 3600
+  monitor_interval_s: 2
+  monitor_stable_n: 4
+  flush_wait_s: 2
+  transcript_since_slack_s: 5

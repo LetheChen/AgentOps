@@ -1,0 +1,24 @@
+# config/domains/smart_analysis.yaml
+domain: smart_analysis
+display_name: 智能分析域
+description: 数据分析、趋势预测、报告生成
+default_harness: codex
+default_model:
+  provider: anthropic
+  id: claude-sonnet-4-20250514
+default_permissions:
+  allowed_tools:                         # 域级默认允许（注意：分析域 allowed sql_query 只读）
+    - sql_query
+    - data_analysis
+    - export_report
+  denied_tools:                          # 域级硬禁止（agent 不可覆盖）
+    - sql_execute
+    - server_restart
+    - db_migrate
+    - ssh_exec
+    - submit_form
+    - approval_flow
+default_knowledge_bases:
+  - smart_analysis_kb
+  - smart_query_kb                       # 分析域可读问数域知识库（数据字典）
+cost_limit_per_run: 1.0

@@ -1,0 +1,37 @@
+# config/tools/task_dispatch_execute.yaml
+# P2 自动调度：task_dispatcher 执行派发（ε-greedy + 声望加权 + execute_coding）
+# 设计文档：docs/product-design/DESIGN_task_lifecycle_automation_v1.md §5.6
+tool_id: task_dispatch_execute
+display_name: 执行派发
+description: |
+  按就绪清单派发执行：二次校验（状态/依赖/风险/并发）→ ε-greedy（20% 均匀随机探索）
+  + 声望加权轮询（时间衰减有效声望 + 保底权重）选 executor →
+  advance_stage(decomposing→in_progress) → execute_coding（harness 按 executor 配置）。
+  medium 风险派发后评论区 @用户（知情可召回）。父任务收尾：子任务全终态 →
+  in_progress→validating 进验收链路。配置读 config/dispatch.yaml。
+input_schema:
+  type: object
+  properties:
+    task_ids:
+      type: array
+      items:
+        type: string
+      description: 派发任务 ID 清单（来自 scan 的 ready_tasks）
+    parent_finalizes:
+      type: array
+      items:
+        type: string
+      description: 子任务全完成的父任务 ID（推进验收链路，可选）
+    thread_id:
+      type: string
+      description: 调度 run 的 session_id（审计用，可选）
+  required: [task_ids]
+handler:
+  module: tools.task_dispatch_execute
+  function: task_dispatch_execute
+  config:
+    timeout_seconds: 120
+allowed_domains: [task_management]
+audit:
+  log_args: true
+  log_result: true

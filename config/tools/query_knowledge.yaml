@@ -1,0 +1,27 @@
+# config/tools/query_knowledge.yaml
+# 视频生产知识库查询 tool（混合方案核心组件）
+# agent 执行过程中按需查询 references 和 prompt-templates，避免 system_prompt 全量注入
+tool_id: query_knowledge
+name: query_knowledge
+description: 按类别和章节查询视频生产知识库的详细规则。支持按 scene_type 匹配图像 prompt 模板。
+allowed_domains:
+  - video_production
+handler: python
+script_file: config/tools/query_knowledge.py
+inputs:
+  - name: category
+    description: "知识类别: narration_style / storyboard_format / image_prompts / composition_design"
+    required: true
+  - name: section
+    description: "章节关键词（可选，如 '念出来测试' / '场景切分' / '动画原则'）"
+    required: false
+  - name: scene_type
+    description: "场景类型（image_prompts 专用，如 'kpi_dashboard' / 'comparison' / 'poster' / 'tutorial'）"
+    required: false
+outputs:
+  - name: rules
+    description: 查询到的规则文本
+  - name: templates
+    description: 匹配的 prompt 模板样本（仅 image_prompts 返回）
+permission_required: read
+timeout: 10

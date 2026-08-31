@@ -1,0 +1,21 @@
+# config/knowledge/smart_ops_kb.yaml
+kb_id: smart_ops_kb
+display_name: 智能运维知识库
+description: 服务器文档、运维手册、告警规则、故障案例
+source:
+  type: vector_store
+  connection: ${KB_SMART_OPS_URL}
+  collection: smart_ops_docs
+permissions:
+  read:
+    - smart_ops                          # 本域读写
+  write:
+    - smart_ops                          # 只有本域能写
+  admin:
+    - smart_ops_admin
+content_categories:
+  - server_docs                          # 服务器文档
+  - ops_manual                           # 运维手册
+  - alert_rules                          # 告警规则
+  - incident_cases                       # 故障案例
+retention_days: 365

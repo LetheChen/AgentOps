@@ -1,0 +1,20 @@
+# config/knowledge/smart_analysis_kb.yaml
+kb_id: smart_analysis_kb
+display_name: 智能分析知识库
+description: 分析模型、指标算法、分析方法论
+source:
+  type: vector_store
+  connection: ${KB_SMART_ANALYSIS_URL}
+  collection: smart_analysis_docs
+permissions:
+  read:
+    - smart_analysis                     # 本域读写
+  write:
+    - smart_analysis                     # 只有本域能写
+  admin:
+    - smart_analysis_admin
+content_categories:
+  - analysis_models                      # 分析模型
+  - metric_algorithms                    # 指标算法
+  - methodology                          # 分析方法论
+retention_days: 365

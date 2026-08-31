@@ -1,0 +1,43 @@
+# config/tools/task_submit_idea.yaml
+# P0 任务管理：建灵感任务
+tool_id: task_submit_idea
+display_name: 提交灵感任务
+description: |
+  创建一个新任务（初始状态 idea），写入 tasks 表。
+  自动分配 identifier（项目前缀 + 自增序号）。
+  thread_id 用于 V1 claim 协议的「不抢占他人认领」判定。
+input_schema:
+  type: object
+  properties:
+    project_id:
+      type: string
+      description: 项目 ID
+    title:
+      type: string
+      description: 任务标题
+    description:
+      type: string
+      description: 任务描述（可选）
+    thread_id:
+      type: string
+      description: 对话线程 ID（透传 session_id，V1 claim 依赖）
+    creator_id:
+      type: string
+      description: 创建者 ID
+    creator_name:
+      type: string
+      description: 创建者名称
+    risk_level:
+      type: string
+      enum: [low, medium, high]
+      default: medium
+  required: [project_id, title]
+handler:
+  module: tools.task_submit_idea
+  function: task_submit_idea
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager, task_planner]
+audit:
+  log_args: true
+  log_result: true

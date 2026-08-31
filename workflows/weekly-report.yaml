@@ -1,0 +1,189 @@
+workflow_id: weekly-report
+name: 周报助手
+version: 3
+description: |
+  3 节点版周报助手：
+  collect_classify（解析合集 + 5 维分类 + value_level_hint 粗判）→
+  grade_summarize（S/A/B/C 终判 + C 级合并 + markdown 生成 + 9 项自检）→
+  archive（归档 Obsidian + 沉淀 weekly-report 知识库）。
+  模板 v2：config/knowledge/weekly-report/template.md（5 维度 + S/A/B/C + Top 3 + 跨周闭环）。
+  
+workspace:
+  root: "workspace/weekly-report/{{run_id}}/"
+  structure:
+    data: data/
+    reports: reports/
+inputs:
+  - name: weekly_submissions
+    type: array
+    required: true
+    description: "多人周报合集，每项含 raw_content（原始周报正文）\n格式：[{raw_content: \"...\"}]\n"
+  - name: period_start
+    type: string
+    required: true
+    description: 本周一日期（YYYY-MM-DD，如 2026-07-13）
+  - name: period_end
+    type: string
+    required: true
+    description: 本周日日期（YYYY-MM-DD，如 2026-07-19）
+  - name: extra_notes
+    type: string
+    required: false
+    description: "用户补充说明（如\"本周重点关注 X 项目\"）"
+  - name: archive_target
+    type: string
+    required: false
+    default: "E:\\Document\\Weekly"
+    description: "Obsidian 归档根目录（默认 E:\\Document\\Weekly）"
+nodes:
+  collect_classify:
+    name: 解析合集 + 5 维 MECE 分类
+    type: agent
+    agent: weekly-reporter
+    business_role: weekly_reporter
+    role_prompt: |
+      你是周报分类员，负责两件事：
+      
+      一、解析合集
+      读取 handoff 字段 weekly_submissions（多人周报合集，每项含 raw_content）。
+      按段落 / 列表项切分为独立工作项，每项提取：
+      {project, title, description, category_hint (粗分类), raw_text}
+      调 write_file 把 JSON 写到 {{workspace.root}}data/collected-items.json
+      
+      二、5 维 MECE 分类
+      5 维度分类边界详见 config/knowledge/weekly-report/template.md §5 维度分类。
+      模糊条目按"主要工作目的"归类，不按关键词。
+      同时为每个工作项打 value_level_hint (S/A/B/C 粗判)
+      
+      输出 JSON 数组追加 category + value_level_hint 字段，
+      写到 {{workspace.root}}data/classified-items.json，调 handoff 传 classified_items 端口。
+      
+      A2UI surface emit（必做）：view_id="collect-live"，对应 actor_visual_profile.json。
+      用 report_surface_state 工具，按 phase 推进（progress 0→33% 段）：
+      - 节点启动立即调 1 次：phase: "started"，data_model 含 title / progress=0 / items_collected / primary_tone
+      - 每解析一批数据调 1 次：phase: "partial"，progress 累加到 5-30
+      - 全部解析分类完成时调 1 次：phase: "final"，progress=33，data_model 含 classified_count / value_level_hint 分布
+      字段约束详见 config/actors/weekly_reporter/actor_visual_profile.json。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M3
+    after: []
+    timeout_seconds: 600
+    inputs:
+      - weekly_submissions
+      - period_start
+      - period_end
+      - extra_notes
+    outputs:
+      classified_items:
+        to: "grade_summarize.in:classified_items"
+  grade_summarize:
+    name: S/A/B/C 终判 + C 级合并 + markdown 生成 + 自检
+    type: agent
+    agent: weekly-reporter
+    business_role: weekly_reporter
+    role_prompt: |
+      你是周报提炼员，负责 4 件事：
+      
+      一、S/A/B/C 终判 + C 级合并
+      量化锚点详见 config/knowledge/weekly-report/concepts/importance-grading.md。
+      C 级合并为汇总项：{grade: "C", is_merged: true, summary: "另处理 N 项...", count: N}
+      
+      二、按 config/knowledge/weekly-report/template.md v2 生成完整 markdown
+      严守铁律：去 AI 味 / 保留专有名词 / 量化优先 / 不编造 / #src:N 标记
+      格式规则（含禁止署作者）详见 concepts/format-rules.md
+      
+      三、自检（template.md §归档前自检，10 项全过才归档）
+      自检失败把 failed_items 附加到「风险与阻塞」并标记 ⚠️ 校验未通过，仍继续调 handoff
+      
+      四、输出 markdown + meta 写到 {{workspace.root}}reports/weekly-report.md
+      
+      A2UI surface emit（必做）：view_id="grade-live"，对应 actor_visual_profile.json。
+      用 report_surface_state 工具，按 phase 推进（progress 33→66% 段）：
+      - 节点启动立即调 1 次：phase: "started"，data_model 含 title / progress=33 / graded_count=0 / primary_tone
+      - 每完成一项分级调 1 次：phase: "partial"，progress 累加 5，graded_count 累加
+      - 全部分级 + markdown + 自检完成时调 1 次：phase: "final"，progress=66，data_model 含 s_count / a_count / b_count / c_count / self_check_passed
+      字段约束详见 config/actors/weekly_reporter/actor_visual_profile.json。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M3
+    after: [collect_classify]
+    timeout_seconds: 600
+    inputs:
+      - classified_items
+      - period_start
+      - period_end
+      - extra_notes
+    outputs:
+      weekly_report_md:
+        to: "archive.in:weekly_report_md"
+      meta:
+        to: "archive.in:meta"
+      failed_items:
+        to: "archive.in:failed_items"
+  archive:
+    name: 归档 Obsidian + 沉淀 weekly-report 知识库
+    type: agent
+    agent: weekly-reporter
+    business_role: weekly_reporter
+    role_prompt: |
+      你是档案员，负责两件事：
+      1) 调 obsidian_vault.write_file 归档周报。
+         path 参数传 vault 内相对路径："Weekly/工作周报_{{period_start}}_{{period_end}}.md"
+         （注意：path 是相对于 vault_root E:\Document 的路径，不要传绝对路径）
+         （已存在则追加到对应维度，不整体覆盖）
+      2) 调 ingest_source 沉淀到 weekly-report 知识库（patterns / concepts/importance-grading / comparisons/writing-samples）
+      若 grade_summarize.failed_items 非空，把它附加到「风险与阻塞」并标记 ⚠️ 校验未通过。
+      立即 finalize。
+      
+      A2UI surface emit（必做）：view_id="archive-live"，对应 actor_visual_profile.json。
+      用 report_surface_state 工具，按 phase 推进（progress 66→100% 段）：
+      - 节点启动立即调 1 次：phase: "started"，data_model 含 title / progress=66 / primary_tone
+      - 每完成一次写入（Obsidian / ingest_source）调 1 次：phase: "partial"，progress 累加到 80-95
+      - 全部归档沉淀完成时调 1 次：phase: "final"，progress=100，data_model 含 archive_path / ingest_count / kb_target
+      字段约束详见 config/actors/weekly_reporter/actor_visual_profile.json。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M3
+    after: [grade_summarize]
+    timeout_seconds: 300
+    inputs:
+      - weekly_report_md
+      - meta
+      - failed_items
+      - period_start
+      - period_end
+      - archive_target
+    outputs:
+      archive_path:
+        to: ""
+      ingest_summary:
+        to: ""
+widgets:
+  - id: w_weekly_progress
+    type: progress_status
+    title: 周报生成进度
+    emit_on:
+      node: collect_classify
+      event: node.started
+    props:
+      title: 周报助手（v3）
+      steps:
+        -           id: collect_classify
+                    title: 解析 + 5 维分类
+                    node: collect_classify
+        -           id: grade_summarize
+                    title: 分级 + 汇总 + 自检
+                    node: grade_summarize
+        -           id: archive
+                    title: 归档 + 沉淀
+                    node: archive
+  - id: w_weekly_report
+    type: artifact_ref
+    title: 周报产物
+    emit_on:
+      node: archive
+      event: node.completed
+    props:
+      path: "{{archive.archive_path}}"
+      format: markdown

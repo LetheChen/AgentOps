@@ -1,0 +1,38 @@
+# config/tools/task_decompose_apply.yaml
+# P2 分解决策：拆分落库（创建子任务 + 父子关系 + 高风险人审通知）
+# 设计文档：docs/product-design/DESIGN_task_lifecycle_automation_v1.md §5.4/§5.5
+tool_id: task_decompose_apply
+display_name: 拆分落库
+description: |
+  按分解决策（strategy=recursive）创建子任务：parent 指向父任务、状态 decomposing
+  （方案继承自父任务，跳过讨论直接进调度池）。高风险父任务的拆分方案
+  评论区 @用户 人审（决策 #7：确认后才进自动调度）。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 父任务 ID（需 discussing/decomposing 状态）
+    subtasks:
+      type: array
+      items:
+        type: object
+        properties:
+          title:
+            type: string
+          description:
+            type: string
+          risk_level:
+            type: string
+            enum: [low, medium, high]
+      description: 子任务清单（title 必填；risk_level 缺省继承父任务）
+  required: [task_id, subtasks]
+handler:
+  module: tools.task_decompose_apply
+  function: task_decompose_apply
+  config:
+    timeout_seconds: 60
+allowed_domains: [task_management]
+audit:
+  log_args: true
+  log_result: true

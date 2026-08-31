@@ -1,0 +1,101 @@
+# ===== AgentOps Docker Compose（单镜像版） =====
+#
+# 启动：
+#   docker compose up -d
+#
+# 停止：
+#   docker compose down
+#
+# 重置数据（⚠️ 删除所有 run / session / 用户）：
+#   docker compose down -v
+#
+# 架构（前后端合并到一个镜像）：
+#   - 单容器同时跑 nginx (80) + uvicorn (1987 容器内)
+#   - nginx 静态托管前端 + /api 反代到 127.0.0.1:1987
+#   - 容器对外只暴露 80 端口
+#   - 首次启动：start.sh 内置幂等的建表 + 创建 admin（无需 init 服务）
+
+name: agentops
+
+services:
+  # ─────────────────────────────────────────────
+  # 全栈服务（前后端合并到单容器）
+  # ─────────────────────────────────────────────
+  agentops:
+    build:
+      context: .
+      dockerfile: docker/agentops/Dockerfile
+    image: agentops:${AGENTOPS_VERSION:-latest}
+    container_name: agentops
+    restart: unless-stopped
+    ports:
+      - "${AGENTOPS_WEB_PORT:-80}:80"
+    volumes:
+      - agentops_data:/app/data
+      - agentops_logs:/app/logs
+      - agentops_workspace:/app/workspace
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # 数据目录
+      AGENTOPS_HOME: /app/data
+      AUDIT_DB_PATH: /app/data/audit.db
+      # 时区（影响日志时间戳）
+      TZ: ${TZ:-Asia/Shanghai}
+      PYTHONIOENCODING: utf-8
+      # 禁用 Obsidian 个人 vault（生产部署应禁用）
+      OBSIDIAN_VAULT_ROOT: ${OBSIDIAN_VAULT_ROOT:-}
+      # bootstrap：admin 账号（生产建议置空走随机密码）
+      AGENTOPS_BOOTSTRAP_USERNAME: ${AGENTOPS_BOOTSTRAP_USERNAME:-admin}
+      AGENTOPS_BOOTSTRAP_PASSWORD: ${AGENTOPS_BOOTSTRAP_PASSWORD:-}
+      # 日志级别
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # 单容器内 init_admin 在 start.sh 启动时跑过，无需再 skip
+      AGENTOPS_SKIP_BOOTSTRAP: "0"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ─────────────────────────────────────────────
+  # agentops-worker（容器化子 agent 运行时，可选）
+  # ─────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: docker/agentops-worker/Dockerfile
+    image: agentops-worker:${AGENTOPS_VERSION:-latest}
+    container_name: agentops-worker
+    restart: unless-stopped
+    environment:
+      NODE_BRIDGE_PORT: 7891
+      WORKSPACE: /workspace
+    volumes:
+      - agentops_worker_workspace:/workspace
+    networks:
+      - agentops_net
+    profiles: ["worker"]   # 默认不启动；需要时 `docker compose --profile worker up -d`
+
+# ─────────────────────────────────────────────────────
+# 命名卷（跨容器重启保留数据）
+# ─────────────────────────────────────────────────────
+volumes:
+  agentops_data:
+    name: agentops_data
+  agentops_logs:
+    name: agentops_logs
+  agentops_workspace:
+    name: agentops_workspace
+  agentops_worker_workspace:
+    name: agentops_worker_workspace
+
+# ─────────────────────────────────────────────────────
+# 网络（worker 仍需独立网络访问主容器外）
+# ─────────────────────────────────────────────────────
+networks:
+  agentops_net:
+    name: agentops_net
+    driver: bridge

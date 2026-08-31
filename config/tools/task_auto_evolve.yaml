@@ -1,0 +1,40 @@
+# config/tools/task_auto_evolve.yaml
+# v2.2 任务调度：task_conductor 确定性演进执行（批量，走 advance_stage 状态机）
+# 设计文档：docs/product-design/task-manage/DESIGN_task_management_module.md §4.10.4
+tool_id: task_auto_evolve
+display_name: 任务自动演进
+description: |
+  执行调度扫描确认的确定性动作：abandon（不活跃归档 → abandoned）/ unblock（依赖就绪解除 blocked→in_progress）。
+  逐条走 advance_stage 状态机（单一事实源），单条失败不影响其余；
+  工具端二次校验候选合法性，拒绝 LLM 臆造的动作（如对 closed 任务归档、对非 blocked 任务解除阻塞）。
+  禁止执行 requires_user=True 的转移（advance_stage 守卫兜底）。
+input_schema:
+  type: object
+  properties:
+    actions:
+      type: array
+      description: '动作列表，每项形如 {task_id: "...", action: "abandon" 或 "unblock"}'
+      items:
+        type: object
+        properties:
+          task_id:
+            type: string
+            description: 任务 ID
+          action:
+            type: string
+            enum: [abandon, unblock]
+            description: abandon=不活跃归档；unblock=依赖就绪解除阻塞
+        required: [task_id, action]
+    thread_id:
+      type: string
+      description: 调度 run 的 session_id（写入审计，可选）
+  required: [actions]
+handler:
+  module: tools.task_auto_evolve
+  function: task_auto_evolve
+  config:
+    timeout_seconds: 60
+allowed_domains: [task_management]
+audit:
+  log_args: true
+  log_result: true

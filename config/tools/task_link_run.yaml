@@ -1,0 +1,38 @@
+# config/tools/task_link_run.yaml
+# V1 任务管理：弱关联 task_run
+tool_id: task_link_run
+display_name: 关联任务执行
+description: |
+  弱关联 task_run：把一个 run/session/terminal_session 绑到任务上。
+  弱关联指 run_id/session_id 不强制 FK，便于跨存储/跨进程关联
+  （mock 模式或外部 run 也能挂）。
+  role 标识关联角色（main_execution/sub_task/verification 等）。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    run_id:
+      type: string
+      description: Run ID（可选）
+    session_id:
+      type: string
+      description: Session ID（可选）
+    terminal_session_id:
+      type: string
+      description: Terminal 会话 ID（可选）
+    role:
+      type: string
+      default: main_execution
+      description: 关联角色（main_execution/sub_task/verification 等）
+  required: [task_id]
+handler:
+  module: tools.task_link_run
+  function: task_link_run
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager, coding_agent]
+audit:
+  log_args: true
+  log_result: true

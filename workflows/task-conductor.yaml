@@ -1,0 +1,157 @@
+workflow_id: task-conductor
+name: 任务定时调度
+version: 1
+description: |
+  4 步 DAG 版任务调度：scan → evaluate → act → report
+  自动执行：不活跃归档（→abandoned，默认 30 天阈值）+ 依赖就绪解除（blocked→in_progress）
+  只报告：卡死任务 / idea 催熟 / 建议开工清单
+  支持 dry_run（只扫描+报告不执行）、定时触发、手动触发。
+  
+workspace:
+  root: "workspace/task-conductor/{{run_id}}/"
+  structure:
+    reports: reports/
+    data: data/
+layout:
+  nodes:
+    scan:
+      x: 80
+      y: 60
+    evaluate:
+      x: 360
+      y: 60
+    act:
+      x: 640
+      y: 60
+    report:
+      x: 920
+      y: 59.14039186134141
+inputs:
+  - name: project_id
+    type: string
+    required: false
+    description: "项目过滤（空 = 全项目）"
+  - name: inactive_days
+    type: integer
+    required: false
+    default: "30"
+    description: 不活跃归档阈值（天）
+  - name: stuck_days
+    type: integer
+    required: false
+    default: "7"
+    description: 卡死/催熟判定阈值（天）
+  - name: dry_run
+    type: boolean
+    required: false
+    default: "false"
+    description: 只扫描+报告，不执行写操作（安全阀）
+nodes:
+  scan:
+    name: 采集候选
+    type: agent
+    agent: task_conductor
+    business_role: 调度扫描员
+    role_prompt: |
+      你是调度扫描员，负责采集归档/解除阻塞候选与卡死、催熟、可开工清单。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: []
+    timeout_seconds: 120
+    inputs:
+      - project_id
+      - inactive_days
+      - stuck_days
+    outputs:
+      scan_result:
+        to: "evaluate.in:scan_result"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  evaluate:
+    name: 复核判定
+    type: agent
+    agent: task_conductor
+    business_role: 调度判定员
+    role_prompt: |
+      你是调度判定员，负责复核扫描候选并输出 decisions（只能确认或剔除，禁止新增）。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [scan]
+    timeout_seconds: 120
+    inputs:
+      - scan_result
+    outputs:
+      decisions:
+        to: "act.in:decisions"
+      scan_result:
+        to: "report.in:scan_result"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  act:
+    name: 执行演进
+    type: agent
+    agent: task_conductor
+    business_role: 演进执行员
+    role_prompt: |
+      你是演进执行员，负责把 decisions 批量提交 task_auto_evolve 落库。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [evaluate]
+    timeout_seconds: 120
+    inputs:
+      - decisions
+    outputs:
+      actions_result:
+        to: "report.in:actions_result"
+    skip_if: "{{dry_run}}"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  report:
+    name: 生成调度报告
+    type: agent
+    agent: task_conductor
+    business_role: 调度报告员
+    role_prompt: |
+      你是调度报告员，负责汇总本轮调度写入 Markdown 报告并按需推送监控中心。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [act]
+    timeout_seconds: 120
+    inputs:
+      - scan_result
+      - actions_result
+    outputs:
+      report_path:
+        to: ""
+    command_config: null
+    await_command_config: null
+    while_config: null
+widgets:
+  - id: w_task_conductor_progress
+    type: progress_status
+    title: 调度进度
+    emit_on:
+      node: scan
+      event: node.started
+    props:
+      title: 任务定时调度
+      steps:
+        -           id: scan
+                    title: 采集候选
+                    node: scan
+        -           id: evaluate
+                    title: 复核判定
+                    node: evaluate
+        -           id: act
+                    title: 执行演进
+                    node: act
+        -           id: report
+                    title: 调度报告
+                    node: report

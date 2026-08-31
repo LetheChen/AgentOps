@@ -1,0 +1,20 @@
+tool_id: mm_search
+name: mm_search
+description: MiniMax CLI 网页搜索，用于 Step 1 收集视频素材数据
+allowed_domains:
+  - video_production
+handler: cli
+command: mmx search query "{query}"
+input_schema:
+  type: object
+  properties:
+    query:
+      type: string
+      description: 搜索关键词，中英文皆可
+  required:
+    - query
+outputs:
+  data: stdout
+permission_required: read
+timeout: 60
+working_dir: "{{workspace.root}}"

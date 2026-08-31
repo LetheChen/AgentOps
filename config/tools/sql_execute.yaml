@@ -1,0 +1,31 @@
+# config/tools/sql_execute.yaml
+tool_id: sql_execute
+display_name: SQL 执行
+description: 执行写操作 SQL（INSERT/UPDATE/DELETE/DDL），仅 DBA 使用
+input_schema:
+  type: object
+  properties:
+    sql:
+      type: string
+      description: SQL 写操作语句（INSERT/UPDATE/DELETE/DDL）
+    database:
+      type: string
+      description: 目标数据库
+  required: [sql, database]
+handler:
+  module: tools.db_tools
+  function: execute_sql_write
+  config:
+    timeout_seconds: 60
+    allowed_operations: [INSERT, UPDATE, DELETE, CREATE, ALTER, DROP]
+allowed_domains: []                       # 无域可用，仅 DBA 人工触发
+audit:
+  log_args: true
+  log_result: true
+  redact_patterns:
+    - "\\b\\d{16,19}\\b"
+    - "\\b\\d{17,18}\\b"
+requires_human_approval: true             # 高危：需人工确认
+approval_widget:
+  type: form
+  fields: [sql, database, confirm]

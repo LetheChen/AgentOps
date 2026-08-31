@@ -1,0 +1,38 @@
+{
+  "actor_id": "integrator",
+  "description": "集成员：汇聚 3 个并行 actor 的交付，推送跨维度综合结论",
+  "allowed_surface_views": [
+    {
+      "view_id": "integrator-live",
+      "output_contract": "ActorReport",
+      "description": "汇聚面板 — actor 就绪度、跨维度洞察与下一步建议",
+      "required_phases": ["started", "final"],
+      "fields": {
+        "title": {"type": "string", "required": true, "max_length": 80},
+        "phase_text": {"type": "string", "required": true, "max_length": 16},
+        "summary": {"type": "string", "required": true, "max_length": 120},
+        "progress": {"type": "integer", "required": true, "min": 0, "max": 100},
+        "actor_done": {"type": "integer", "required": true, "min": 0, "max": 3},
+        "insight_count": {"type": "integer", "required": true, "min": 0},
+        "ready_count": {"type": "integer", "required": true, "min": 0, "max": 3},
+        "headline_finding": {"type": "string", "required": true, "max_length": 240},
+        "next_step": {"type": "string", "required": true, "max_length": 120},
+        "primary_tone": {"type": "enum", "required": true, "values": ["neutral", "info", "positive", "warning", "critical"]}
+      },
+      "template": [
+        {"id": "root", "component": "Column", "children": ["badge", "bar", "summary_text", "grid", "headline", "next"]},
+        {"id": "badge", "component": "AoStatusBadge", "text": "$title", "tone": "$primary_tone"},
+        {"id": "bar", "component": "AoProgress", "label": "$phase_text", "value": "$progress"},
+        {"id": "summary_text", "component": "Text", "text": "$summary"},
+        {"id": "grid", "component": "AoGrid", "children": ["m_actor", "m_ready", "m_insight"], "columns": {"default": 3}},
+        {"id": "m_actor", "component": "AoMetric", "label": "已完成 Actor", "value": "$actor_done", "unit": "个"},
+        {"id": "m_ready", "component": "AoMetric", "label": "校验通过", "value": "$ready_count", "unit": "个"},
+        {"id": "m_insight", "component": "AoMetric", "label": "跨维度洞察", "value": "$insight_count", "unit": "条"},
+        {"id": "headline", "component": "AoDisclosure", "title": "跨维度综合发现", "children": ["headline_text"]},
+        {"id": "headline_text", "component": "Text", "text": "$headline_finding"},
+        {"id": "next", "component": "AoDisclosure", "title": "建议下一步", "children": ["next_text"]},
+        {"id": "next_text", "component": "Text", "text": "$next_step"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+[project]
+name = "agent-ops"
+version = "0.1.0"
+description = "AgentOps — multi-agent DAG orchestration platform with generative UI"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+    "asyncio-throttle>=1.0.2",
+    "typer>=0.12",
+    "rich>=13.7",
+    "anyio>=4.4",
+    "python-dotenv>=1.0",
+    "psutil>=5.9",
+    "docker>=7.1.0,<8",
+    "paramiko>=3.4",            # pull_logs 工具 SFTP 远程日志拉取（依赖 cryptography，覆盖 credential_store 的 Fernet）
+    "argon2-cffi>=23.1",        # 安全认证 MVP：用户密码 / API 令牌哈希（audit/security_schema.py）
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "mypy>=1.13",
+]
+# 知识库内容提取依赖（extract_content 工具按需使用，缺依赖时工具返回 missing_dependency 错误）
+# 安装：pip install -e ".[knowledge]"
+knowledge = [
+    "trafilatura>=1.12",        # article URL 提取
+    "pdfplumber>=0.11",         # PDF 提取
+    "python-docx>=1.1",         # Word 文档提取（import 名是 docx）
+    "openai-whisper>=20231117", # 音视频转文字（含 torch，体积较大）
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["orchestrator*", "harness*", "workflow*", "events*", "widgets*", "roles*", "policy*"]

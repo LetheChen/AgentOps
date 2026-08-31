@@ -1,0 +1,94 @@
+# ===== Git =====
+.git/
+.gitignore
+.gitattributes
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.pytest_cache/
+
+# ===== Node / 前端 =====
+node_modules/
+web/node_modules/
+web/dist/
+web/.vite/
+web/tsconfig.tsbuildinfo
+
+# ===== 运行时产物（每次 run 产生） =====
+audit.db
+audit.db-wal
+audit.db-shm
+workspace/
+.workflow/
+.uploads/
+
+# ===== 日志 / 临时 =====
+logs/
+temp/
+*.log
+.workbuddy/
+.test_results.txt
+opencode*.log
+
+# ===== 环境变量（敏感） =====
+.env
+.env.local
+.env.*.local
+
+# ===== 文档（设计文档不进镜像；运行时不需要） =====
+docs/
+README.md
+LICENSE
+CHANGELOG.md
+*.md
+
+# ===== 备份 / IDE / OS =====
+*_backup_*.py
+*_backup_*.yaml
+*.bak
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+.playwright-mcp/
+
+# ===== 调试残留 =====
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+tmp.json
+tmp2.json
+runs.json
+private/
+private*.yaml
+.agentops/
+
+# ===== 私有设计文档 =====
+docs/_private/
+
+# ===== 测试 / CI 缓存 =====
+tests/.pytest_cache/
+
+# ===== Docker 元数据 =====
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+docker-compose.*.yml
+.dockerignore
+.docker-volumes/
+
+# ===== git hooks / editor temp =====
+*.orig
+*.rej

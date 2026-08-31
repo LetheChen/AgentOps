@@ -1,0 +1,43 @@
+# config/tools/emit_alert.yaml
+# 监控告警推送工具 — 把 tip 推到 api/server.py 全局告警队列（SSE 通道）
+# 对应 tools/emit_alert.py，通过 HTTP POST /api/monitor/emit-alert 入队
+# handler 为 dict 格式（{module, function, config}），供 local_llm harness function calling
+tool_id: emit_alert
+display_name: 监控告警推送
+description: 把告警/提示推送到监控中心全局告警队列，经 SSE 通道实时推给前端（severity/tip_type 受控）
+input_schema:
+  type: object
+  properties:
+    severity:
+      type: string
+      description: "严重级别: info / warning / error / success"
+      default: info
+    title:
+      type: string
+      description: 标题（短）
+    message:
+      type: string
+      description: 正文（可较长）
+    tip_type:
+      type: string
+      description: "tip 类型: patrol_alert / task_started / task_completed / validation_result / quota_warning"
+      default: patrol_alert
+    agent_id:
+      type: string
+      description: 来源 agent ID（可选，用于追溯）
+    run_id:
+      type: string
+      description: 关联 run ID（可选）
+  required:
+    - title
+handler:
+  module: tools.emit_alert
+  function: emit_alert
+  config:
+    backend_url: http://localhost:1987
+allowed_domains:
+  - video_production
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true

@@ -1,0 +1,31 @@
+# config/tools/list_failed_runs.yaml
+# DAG run 异常查询工具
+# 直接读 audit.db（不依赖 _orchestrator 内存状态），查最近 N 小时内 failed 状态的 run + node.failed 事件
+# task_monitor agent probe 节点用，可与 system_probe 配合覆盖"程序异常 + 任务异常"两类巡检
+tool_id: list_failed_runs
+display_name: 失败任务查询
+description: 查询最近 N 小时内失败的 DAG run + 节点失败事件（直接读 audit.db，不依赖后端进程）
+input_schema:
+  type: object
+  properties:
+    time_range:
+      type: string
+      description: 时间范围（如 1h/24h/7d，默认 1h）
+      default: "1h"
+    limit:
+      type: integer
+      description: 返回最大条数（默认 20，上限 200）
+      default: 20
+  required: []
+handler:
+  module: tools.ops_tools
+  function: list_failed_runs
+  config:
+    # audit_db_path 不写则用默认 audit.db（项目根目录）
+    # 也支持环境变量 AGENTOPS_AUDIT_DB 覆盖
+    audit_db_path: audit.db
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true

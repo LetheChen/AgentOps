@@ -1,0 +1,51 @@
+# config/tools/extract_content.yaml
+# URL/音视频内容提取工具（Layer B）：content_curator agent 专用
+# 设计文档：docs/knowledge-base/DESIGN_content_curator_agent.md §3.1
+# 实现文件：tools/extract_content.py
+#
+# 支持的 content_type：
+#   article: 博客/技术文档（trafilatura）
+#   pdf: PDF 报告（pdfplumber，复用 obsidian_vault 抽取器）
+#   doc: Word 文档（python-docx）
+#   video/audio: 音视频转文字（whisper-small，Q-2 默认，GPU 不可用降级到 tiny）
+#   auto: 根据 URL 后缀自动判断
+#
+# fallback 策略：
+#   - trafilatura 失败（反爬/403）→ 返回 fetch_failed + 提示用户手工粘贴
+#   - whisper-small 失败 → 降级到 whisper-tiny，仍失败返回 transcribe_failed
+tool_id: extract_content
+display_name: 内容提取
+description: |
+  URL/音视频内容提取工具。content_curator agent 接收博客/技术文档/音视频链接后调用本工具提取为文本。
+  支持 article（trafilatura）/ pdf（pdfplumber）/ doc（python-docx）/ video+audio（whisper-small）/
+  auto（自动判断）5 种模式。trafilatura 失败时 fallback 提示用户手工粘贴；whisper-small 失败时降级到 tiny。
+  不做 LLM 提炼，只做文本提取。
+input_schema:
+  type: object
+  properties:
+    url:
+      type: string
+      description: URL（http/https/file，如 "https://blog.example.com/rag-guide" 或 "file:///E:/Document/草稿仓库/RAG实战.md"）
+    content_type:
+      type: string
+      enum: [auto, article, video, audio, pdf, doc]
+      default: auto
+      description: 内容类型（auto 时根据 URL 后缀自动判断）
+    max_length:
+      type: integer
+      default: 50000
+      description: 提取文本最大长度（字符数，超出截断）
+    agent_id:
+      type: string
+      description: 调用方 agent id（如 content_curator）
+  required: [url]
+handler:
+  module: tools.extract_content
+  function: extract_content
+  config:
+    timeout_seconds: 600
+allowed_domains:
+  - content_curator
+audit:
+  log_args: true
+  log_result: true

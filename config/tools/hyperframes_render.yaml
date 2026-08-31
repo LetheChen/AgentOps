@@ -1,0 +1,27 @@
+tool_id: hyperframes_render
+name: hyperframes_render
+description: 将 composition.html 渲染为 MP4 视频（自动包装为 hyperframes project + 复制媒体资源）
+allowed_domains:
+  - video_production
+handler:
+  module: tools.hyperframes_render_handler
+  function: run
+  config:
+    web_dir: "{{project_root}}/web"
+input_schema:
+  type: object
+  properties:
+    html:
+      type: string
+      description: composition.html 文件路径（由 compose 节点产出）
+    output:
+      type: string
+      description: 输出的 MP4 文件路径
+  required:
+    - html
+    - output
+outputs:
+  video_file: "file:{output}"
+permission_required: write
+timeout: 600
+retry: 2

@@ -1,0 +1,132 @@
+providers:
+  openai:
+    api_key: ${OPENAI_API_KEY}
+    base_url: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+    protocol: openai_compatible
+    auth_type: bearer
+    models: []
+  anthropic:
+    api_key: ${ANTHROPIC_API_KEY}
+    base_url: https://api.anthropic.com/v1
+    protocol: anthropic_compatible
+    auth_type: x-api-key
+    models: []
+  deepseek:
+    api_key: ${DEEPSEEK_API_KEY}
+    base_url: https://api.deepseek.com
+    protocol: openai_compatible
+    auth_type: bearer
+    models:
+    - id: deepseek-v4-pro
+      max_tokens: 384000
+      price_input_per_1k: 0.003
+      price_output_per_1k: 0.006
+    - id: deepseek-v4-flash
+      max_tokens: 384000
+      price_input_per_1k: 0.001
+      price_output_per_1k: 0.002
+  minimax:
+    api_key: ${MINIMAX_API_KEY}
+    base_url: https://api.minimaxi.com/v1
+    protocol: openai_compatible
+    auth_type: bearer
+    models:
+    - id: MiniMax-M3
+      max_tokens: 8192
+      price_input_per_1k: 0.001
+      price_output_per_1k: 0.005
+    - id: MiniMax-M2.7
+      max_tokens: 8192
+      price_input_per_1k: 0.001
+      price_output_per_1k: 0.005
+    - id: MiniMax-M2.7-highspeed
+      max_tokens: 8192
+      price_input_per_1k: 0.001
+      price_output_per_1k: 0.005
+  vllm:
+    api_key: ${VLLM_API_KEY}
+    base_url: ${VLLM_BASE_URL}
+    protocol: openai_compatible
+    auth_type: bearer
+    models:
+    - id: Qwen3.6-35B-A3B-FP8
+      max_tokens: 4096
+      price_input_per_1k: 0
+      price_output_per_1k: 0
+    - id: /opt/models/Qwen3.8-27B-FP8
+  glm:
+    api_key: ${GLM_API_KEY}
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    protocol: openai_compatible
+    auth_type: bearer
+    models:
+    - id: glm-5.2
+    - id: glm-5.1
+  OpenCode:
+    api_key: ${OPENCODE_API_KEY}
+    base_url: https://opencode.ai/zen/go/v1
+    protocol: openai_compatible
+    auth_type: bearer
+    models:
+    - id: minimax-m3
+    - id: kimi-k3
+    - id: glm-5.2
+    - id: deepseek-v4-pro
+    - id: deepseek-v4-flash
+  火山方舟:
+    api_key: ${火山方舟_API_KEY}
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    protocol: openai_compatible
+    auth_type: bearer
+    models:
+    - id: glm-5-2-260617
+    - id: deepseek-v4-flash-260425
+    - id: deepseek-v4-pro-260425
+    - id: kimi-k3
+      max_tokens: 10240
+      price_input_per_1k: 0
+      price_output_per_1k: 0
+  腾讯云:
+    api_key: ${腾讯云_API_KEY}
+    base_url: https://tokenhub.tencentmaas.com/plan/anthropic
+    protocol: anthropic_compatible
+    auth_type: x-api-key
+    models: []
+  vLLM:
+    api_key: ${VLLM_API_KEY}
+    base_url: http://10.3.75.86:8000/v1
+    protocol: openai_compatible
+    auth_type: bearer
+    models:
+    - id: qwen3.8-flash
+      max_tokens: 128000
+      price_input_per_1k: 0.012
+      price_output_per_1k: 0.036
+domain_models:
+  smart_query:
+    provider: minimax
+    model: MiniMax-M3
+  smart_ops:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+  smart_approval:
+    provider: openai
+    model: gpt-4o-mini
+  smart_form:
+    provider: openai
+    model: gpt-4o-mini
+  smart_analysis:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+manager_model:
+  provider: minimax
+  model: MiniMax-M3
+default:
+  provider: minimax
+  model: MiniMax-M3
+fallback_chains:
+  minimax:
+  - provider: vLLM
+    model: qwen3.8-flash-next
+  - provider: deepseek
+    model: deepseek-v4-pro

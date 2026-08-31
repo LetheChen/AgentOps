@@ -1,0 +1,39 @@
+# config/tools/task_approval.yaml
+# V1 任务管理：发起任务评审（风险分级）
+tool_id: task_approval
+display_name: 发起任务评审
+description: |
+  发起任务决策评审（轻量风险分级 + 用户确认，非 OA 审批流）。
+  low → 自动通过标记 approved，进 decomposing；
+  medium → 通知用户，可放行；
+  high → 强制人审（进 reviewing）。
+  审批通过标记 approved（瞬时）；退回则回 backlog。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    risk_level:
+      type: string
+      enum: [low, medium, high]
+      description: 风险等级
+    if_version:
+      type: integer
+      description: 乐观锁版本号
+    proposal_summary:
+      type: string
+      description: 方案摘要
+    impact_analysis:
+      type: string
+      description: 影响面分析
+  required: [task_id, risk_level, if_version]
+handler:
+  module: tools.task_approval
+  function: task_approval
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager]
+audit:
+  log_args: true
+  log_result: true

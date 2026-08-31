@@ -1,0 +1,22 @@
+# config/domains/smart_form.yaml
+domain: smart_form
+display_name: 智能填单域
+description: OA 表单填写、提交、校验
+default_harness: local_llm
+default_model:
+  provider: openai
+  id: gpt-4o-mini
+default_permissions:
+  allowed_tools:                         # 域级默认允许
+    - submit_form
+    - form_validate
+  denied_tools:                          # 域级硬禁止（agent 不可覆盖）
+    - sql_query
+    - sql_execute
+    - server_restart
+    - db_migrate
+    - ssh_exec
+    - approval_flow
+default_knowledge_bases:
+  - smart_form_kb
+cost_limit_per_run: 0.2

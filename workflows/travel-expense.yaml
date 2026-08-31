@@ -1,0 +1,204 @@
+# v1 9 步智能审批 → v2.1 YAML DAG 翻译（差旅报销 PoC）
+# 原始 v1 步骤（来自 AI_Automation_项目开发设计方案.md v1.1 §1.3）:
+#   Step 1 数据预处理: 拉取 OA 单据
+#   Step 2 激活审核项: 按 activate_when 条件匹配
+#   Step 3 调度工具: corporate_travel / oa_db / attachment
+#   Step 4 附件识别: 视觉模型识别发票等
+#   Step 5 数据组装: 拼装审核项 input + 规则
+#   Step 6 统一模型审核: 单次 LLM 调用批量完成所有审核项
+#   Step 7 结果拆分: 拆分 LLM 列表 + 执行 11 个程序化检查器
+#   Step 8 汇总决策: reject > manual > pass 三级
+#   Step 9 PDF + 回调: 生成报告 + 回调 OA 节点
+#
+# 注: 这个 PoC 全部用 deterministic harness, 验证 YAML + DAG engine 能承载 v1 业务拓扑;
+#     真实落地时 Step 3/4/6 需要切到 http / claude_code / opencode 等真实 harness.
+
+workflow_id: travel-expense
+name: 差旅报销智能审核 (9 步)
+version: 1.0
+description: |
+  v1 9 步的 v2.1 DAG 化翻译。Step 3 拆为并行分支（dispatch_corp_travel / dispatch_oa_db / dispatch_attachments）。
+  Step 8 用 gateway (condition) 节点表达三分支决策。
+source_policy: policies/travel-expense.md
+
+inputs:
+  - name: summary_id
+    type: string
+    required: true
+  - name: form_app_id
+    type: string
+    required: true
+  - name: node_token
+    type: string
+    required: true
+
+nodes:
+  # ── Step 1: 数据预处理 ─────────────────────────
+  step1_fetch:
+    name: Step 1 · 拉取 OA 原始单据
+    type: agent
+    agent: oa_data_fetcher
+    business_role: 单据采集员
+    harness: deterministic
+    after: []
+    inputs: [summary_id, form_app_id, node_token]
+    outputs:
+      fetched:
+        to: "step2_activate.in:fetched"
+
+  # ── Step 2: 激活审核项 ─────────────────────────
+  step2_activate:
+    name: Step 2 · 激活审核项
+    type: agent
+    agent: workflow_engine
+    business_role: 审核规则员
+    harness: deterministic
+    after: [step1_fetch]
+    inputs: [fetched]
+    outputs:
+      activated:
+        to: "step3_dispatch.in:activated"
+
+  # ── Step 3: 调度工具 (parallel_branch) ──────────
+  step3_dispatch:
+    name: Step 3 · 调度工具 (并行)
+    type: parallel_branch
+    join_strategy: all
+    cancel_on_first_fail: true
+    after: [step2_activate]
+    inputs: [activated]
+    branches: [step3a_corp, step3b_db, step3c_attach]
+    outputs:
+      collected:
+        to: "step4_attach_parse.in:collected"
+
+  step3a_corp:
+    name: Step 3a · 商旅统付数据
+    type: agent
+    agent: corporate_travel_tool
+    business_role: 商旅数据员
+    harness: deterministic
+    after: [step2_activate]
+    outputs:
+      corp:
+        to: "step4_attach_parse.in:corp"
+
+  step3b_db:
+    name: Step 3b · 历史差补行程
+    type: agent
+    agent: oa_db_tool
+    business_role: 历史行程员
+    harness: deterministic
+    after: [step2_activate]
+    outputs:
+      db:
+        to: "step4_attach_parse.in:db"
+
+  step3c_attach:
+    name: Step 3c · 附件清单
+    type: agent
+    agent: attachment_router
+    business_role: 附件清单员
+    harness: deterministic
+    after: [step2_activate]
+    outputs:
+      attach:
+        to: "step4_attach_parse.in:attach"
+
+  # ── Step 4: 附件识别 ─────────────────────────
+  step4_attach_parse:
+    name: Step 4 · 附件识别
+    type: agent
+    agent: vision_analyzer
+    business_role: 附件识别员
+    harness: deterministic
+    after: [step3a_corp, step3b_db, step3c_attach]
+    inputs: [collected, corp, db, attach]
+    outputs:
+      parsed:
+        to: "step5_assemble.in:parsed"
+
+  # ── Step 5: 数据组装准备 ─────────────────────────
+  step5_assemble:
+    name: Step 5 · 数据组装
+    type: agent
+    agent: prompt_assembler
+    business_role: 数据组装员
+    harness: deterministic
+    after: [step4_attach_parse]
+    inputs: [parsed]
+    outputs:
+      prepared:
+        to: "step6_audit.in:prepared"
+
+  # ── Step 6: 统一模型审核 ─────────────────────────
+  step6_audit:
+    name: Step 6 · 统一模型审核
+    type: agent
+    agent: auditor
+    business_role: 智能审核员
+    harness: deterministic
+    after: [step5_assemble]
+    inputs: [prepared]
+    outputs:
+      audited:
+        to: "step7_split.in:audited"
+
+  # ── Step 7: 结果拆分 ─────────────────────────
+  step7_split:
+    name: Step 7 · 结果拆分
+    type: agent
+    agent: result_splitter
+    business_role: 结果拆分校核员
+    harness: deterministic
+    after: [step6_audit]
+    inputs: [audited]
+    outputs:
+      split:
+        to: "step8_decision.in:split"
+
+  # ── Step 8: 汇总决策 (gateway) ─────────────────────────
+  step8_decision:
+    name: Step 8 · 汇总决策
+    type: gateway
+    gateway_kind: condition
+    condition: "result.severity == 'reject' ? 'reject' : (result.severity == 'manual' ? 'manual' : 'pass')"
+    after: [step7_split]
+    inputs: [split]
+    outputs:
+      pass:    { to: "step9_report.in:passed" }
+      manual:  { to: "step9_report.in:manual" }
+      reject:  { to: "step9_report.in:rejected" }
+
+  # ── Step 9: 报告 + 回调 ─────────────────────────
+  step9_report:
+    name: Step 9 · PDF 报告 + OA 回调
+    type: agent
+    agent: reporter
+    business_role: 报告推送员
+    harness: deterministic
+    after: [step8_decision]
+    inputs: [passed, manual, rejected]
+    outputs:
+      done:
+        to: ""
+
+# Widget 示例 (codex 补的 6 类)
+widgets:
+  - id: w_progress
+    type: progress_status
+    title: 审核进度
+    emit_on:
+      node: step6_audit
+      event: node.started
+    props:
+      steps: [fetch, activate, dispatch, parse, assemble, audit, split, decide, report]
+      active_step: 6
+  - id: w_decision
+    type: task_draft
+    title: 审核结论
+    emit_on:
+      node: step8_decision
+      event: node.completed
+    props:
+      items: []

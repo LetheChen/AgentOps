@@ -1,0 +1,24 @@
+# config/tools/get_run_supervision.yaml
+# 🆕 Phase 3: Supervision 工具 - 查看子任务进度
+tool_id: get_run_supervision
+display_name: 查看子任务进度
+description: |
+  查看某个子任务的执行状态和节点进度。Manager Agent 用来监督子 agent 执行情况。
+  返回 Run 状态 + 各节点状态（running/completed/failed/skipped）+ 关键里程碑。
+  当用户问"任务跑到哪了"或"进度怎么样"时调用此工具。
+input_schema:
+  type: object
+  properties:
+    run_id:
+      type: string
+      description: 子任务的 run_id
+  required: [run_id]
+handler:
+  module: tools.supervision
+  function: get_run_supervision
+  config: {}
+allowed_domains:
+  - manager
+audit:
+  log_args: true
+  log_result: false

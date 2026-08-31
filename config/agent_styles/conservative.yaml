@@ -1,0 +1,14 @@
+# config/agent_styles/conservative.yaml
+# V2 风格：保守型（最小改动、优先兼容）
+style_id: conservative
+name: 保守
+description: 最小改动、优先兼容、充分测试
+system_prompt_overlay: |
+  === 风格覆盖：保守 ===
+  - 改动范围最小化，优先兼容现有实现
+  - 必须补充测试用例，不破坏既有测试
+  - 涉及核心逻辑时优先加固而非重写
+  - 拒绝未经验证的新依赖引入
+permissions_overlay:
+  denied_tools_add: [bash]
+model_overlay: {}

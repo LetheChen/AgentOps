@@ -1,0 +1,37 @@
+{
+  "actor_id": "log_puller",
+  "description": "日志拉取员：推送拉取进度与结果快照（started → final），拉取统计实时可视化",
+  "allowed_surface_views": [
+    {
+      "view_id": "pull-live",
+      "output_contract": "ActorReport",
+      "description": "日志拉取实时面板 — 拉取进度、文件统计与错误信息",
+      "required_phases": ["started", "final"],
+      "fields": {
+        "title": {"type": "string", "required": true, "max_length": 80},
+        "phase_text": {"type": "string", "required": true, "max_length": 16},
+        "summary": {"type": "string", "required": true, "max_length": 120},
+        "progress": {"type": "integer", "required": true, "min": 0, "max": 100},
+        "files_pulled": {"type": "integer", "required": true, "min": 0},
+        "files_skipped": {"type": "integer", "required": true, "min": 0},
+        "bytes_mb": {"type": "number", "required": true, "min": 0},
+        "duration_seconds": {"type": "number", "required": true, "min": 0},
+        "error_text": {"type": "string", "required": false, "max_length": 240},
+        "primary_tone": {"type": "enum", "required": true, "values": ["neutral", "info", "positive", "warning", "critical"]}
+      },
+      "template": [
+        {"id": "root", "component": "Column", "children": ["badge", "bar", "summary_text", "grid", "err"]},
+        {"id": "badge", "component": "AoStatusBadge", "text": "$title", "tone": "$primary_tone"},
+        {"id": "bar", "component": "AoProgress", "label": "$phase_text", "value": "$progress"},
+        {"id": "summary_text", "component": "Text", "text": "$summary"},
+        {"id": "grid", "component": "AoGrid", "children": ["m_pulled", "m_skipped", "m_bytes", "m_duration"], "columns": {"default": 3, "compact": 2}},
+        {"id": "m_pulled", "component": "AoMetric", "label": "拉取文件", "value": "$files_pulled", "unit": "个"},
+        {"id": "m_skipped", "component": "AoMetric", "label": "跳过(未变)", "value": "$files_skipped", "unit": "个"},
+        {"id": "m_bytes", "component": "AoMetric", "label": "数据量", "value": "$bytes_mb", "unit": "MB"},
+        {"id": "m_duration", "component": "AoMetric", "label": "耗时", "value": "$duration_seconds", "unit": "s"},
+        {"id": "err", "component": "AoDisclosure", "title": "错误详情", "children": ["err_text"]},
+        {"id": "err_text", "component": "Text", "text": "$error_text"}
+      ]
+    }
+  ]
+}

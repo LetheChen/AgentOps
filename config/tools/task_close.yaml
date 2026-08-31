@@ -1,0 +1,29 @@
+# config/tools/task_close.yaml
+# V1 任务管理：关闭任务（硬约束检查）
+tool_id: task_close
+display_name: 关闭任务
+description: |
+  关闭任务前硬约束检查（全部满足才 closed）：
+  1. 交付物验收通过（acceptance_criteria 全部 passed）
+  2. 受影响设计文档已回写（doc_change_proposals 无 pending）
+  两步推进：validating → closing → closed。
+  agent 禁用此工具（仅用户/manager 可关闭）。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    if_version:
+      type: integer
+      description: 乐观锁版本号
+  required: [task_id, if_version]
+handler:
+  module: tools.task_close
+  function: task_close
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager]
+audit:
+  log_args: true
+  log_result: true

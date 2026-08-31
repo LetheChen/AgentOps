@@ -1,0 +1,40 @@
+# config/tools/system_probe.yaml
+# 系统资源与进程探针工具
+# agent 通过 function calling（local_llm harness）调用，采集进程/端口/磁盘/内存/CPU 指标
+# 不依赖后端进程，可在子进程独立运行（task_monitor agent probe 节点用）
+tool_id: system_probe
+display_name: 系统资源探针
+description: 探测系统资源（进程存活/端口可达/磁盘/内存/CPU 使用率），任一指标超阈值则 abnormal=true
+input_schema:
+  type: object
+  properties:
+    check_scope:
+      type: string
+      description: "检测范围: all（默认）/ process / port / disk / memory / cpu / task"
+      default: all
+    target_services:
+      type: string
+      description: 逗号分隔的服务名（如 agentops_backend,agentops_frontend）；服务名映射见 _SERVICE_PROCESS_MAP
+      default: "agentops_backend,agentops_frontend"
+    target_ports:
+      type: string
+      description: 逗号分隔的目标端口（如 1987,5173）
+      default: "1987,5173"
+    disk_path:
+      type: string
+      description: 磁盘路径（Linux 默认 /，Windows 默认 C:\\）
+      default: "/"
+    host:
+      type: string
+      description: 端口探测目标 host（默认 127.0.0.1）
+      default: "127.0.0.1"
+  required: []
+handler:
+  module: tools.ops_tools
+  function: system_probe
+  config: {}
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true

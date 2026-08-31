@@ -1,0 +1,39 @@
+# config/quota.yaml
+# 模型额度声明 — 供监控中心 QuotaPanel 展示
+#
+# 机制：MiniMax 等套餐级额度官方 API 不返回配额信息，
+# AgentOps 用本地滑动窗口追踪（聚合 usage_records 表最近 N 小时记录）。
+# 总配额由用户按套餐手动声明，重置时间 = 最早记录时间 + 窗口时长。
+#
+# 修改后需重启服务才生效（不做热加载）
+# 告警阈值达到时在监控中心弹 tips（不推企业微信）
+
+# ── Provider 额度声明 ──────────────────────────────────────
+# window_hours: 滚动窗口时长（小时）
+# total_tokens: 窗口内总配额（token 数，input+output 合计）
+# models: 该 provider 下计入此配额的模型列表
+# reset_policy: sliding=滑动窗口（最早记录+窗口时长）/ fixed=整点重置
+providers:
+  minimax:
+    window_hours: 5
+    total_tokens: 5000000      # 5h 内总配额（按套餐填，MiniMax 年度套餐默认 500 万）
+    models:
+      - MiniMax-M3
+      - MiniMax-M2.7
+      - MiniMax-M2.7-highspeed
+    reset_policy: sliding
+    description: "MiniMax 年度套餐 5 小时滚动窗口"
+
+  deepseek:
+    window_hours: 1
+    total_tokens: 1000000
+    models:
+      - deepseek-v4-flash
+      - deepseek-v4-pro
+    reset_policy: sliding
+    description: "DeepSeek 小时窗口"
+
+# ── 告警阈值（达到 X% 时在监控中心黄/红预警）──────────────
+alert_thresholds:
+  yellow: 80   # 80% 黄色 tips
+  red: 95      # 95% 红色 tips

@@ -1,0 +1,23 @@
+# config/tools/list_session_runs.yaml
+# 🆕 Phase 3: Supervision 工具 - 列出当前会话的所有子任务
+tool_id: list_session_runs
+display_name: 列出当前会话的所有子任务
+description: |
+  列出当前会话（Session）关联的所有子任务。Manager Agent 用来查看自己调度过的所有任务。
+  不传 session_id 时自动用当前活跃 run_id 作为 session_id。
+  当用户问"我有哪些任务在跑"或"这次会话做了什么"时调用此工具。
+input_schema:
+  type: object
+  properties:
+    session_id:
+      type: string
+      description: Session ID（可选，不传则用当前活跃 run_id）
+handler:
+  module: tools.supervision
+  function: list_session_runs
+  config: {}
+allowed_domains:
+  - manager
+audit:
+  log_args: false
+  log_result: false

@@ -1,0 +1,43 @@
+{
+  "actor_id": "research",
+  "description": "调研分析师（证据调查维度）：三次完整快照推送调研进度与发现",
+  "allowed_surface_views": [
+    {
+      "view_id": "research-live",
+      "output_contract": "ActorReport",
+      "description": "调研实时面板 — 证据收集进度、关键发现与来源",
+      "required_phases": ["started", "partial", "final"],
+      "fields": {
+        "title": {"type": "string", "required": true, "max_length": 80},
+        "phase_text": {"type": "string", "required": true, "max_length": 16},
+        "summary": {"type": "string", "required": true, "max_length": 120},
+        "progress": {"type": "integer", "required": true, "min": 0, "max": 100},
+        "verified_count": {"type": "integer", "required": true, "min": 0},
+        "source_count": {"type": "integer", "required": true, "min": 0},
+        "gap_count": {"type": "integer", "required": true, "min": 0},
+        "finding_one": {"type": "string", "required": true, "max_length": 240},
+        "finding_two": {"type": "string", "required": true, "max_length": 240},
+        "source_one": {"type": "string", "required": true, "max_length": 240},
+        "source_two": {"type": "string", "required": true, "max_length": 240},
+        "primary_tone": {"type": "enum", "required": true, "values": ["neutral", "info", "positive", "warning", "critical"]}
+      },
+      "template": [
+        {"id": "root", "component": "Column", "children": ["badge", "bar", "summary_text", "grid", "f1", "f2", "src"]},
+        {"id": "badge", "component": "AoStatusBadge", "text": "$title", "tone": "$primary_tone"},
+        {"id": "bar", "component": "AoProgress", "label": "$phase_text", "value": "$progress"},
+        {"id": "summary_text", "component": "Text", "text": "$summary"},
+        {"id": "grid", "component": "AoGrid", "children": ["m_verified", "m_source", "m_gap"], "columns": {"default": 3}},
+        {"id": "m_verified", "component": "AoMetric", "label": "已验证", "value": "$verified_count", "unit": "条"},
+        {"id": "m_source", "component": "AoMetric", "label": "来源数", "value": "$source_count", "unit": "条"},
+        {"id": "m_gap", "component": "AoMetric", "label": "信息缺口", "value": "$gap_count", "unit": "项"},
+        {"id": "f1", "component": "AoDisclosure", "title": "关键发现 1", "children": ["f1_text"]},
+        {"id": "f1_text", "component": "Text", "text": "$finding_one"},
+        {"id": "f2", "component": "AoDisclosure", "title": "关键发现 2", "children": ["f2_text"]},
+        {"id": "f2_text", "component": "Text", "text": "$finding_two"},
+        {"id": "src", "component": "AoDisclosure", "title": "核心来源", "children": ["src_one_text", "src_two_text"]},
+        {"id": "src_one_text", "component": "Text", "text": "$source_one"},
+        {"id": "src_two_text", "component": "Text", "text": "$source_two"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+# config/tools/sql_query.yaml
+tool_id: sql_query
+display_name: SQL 查询
+description: 执行只读 SQL 查询
+input_schema:
+  type: object
+  properties:
+    sql:
+      type: string
+      description: SQL 查询语句（仅 SELECT）
+    database:
+      type: string
+      description: 目标数据库
+  required: [sql]
+handler:                                  # 工具实现引用
+  module: tools.db_tools
+  function: execute_sql_query
+  config:
+    max_rows: 10000
+    timeout_seconds: 30
+    allowed_operations: [SELECT]          # 只允许查询
+allowed_domains:                          # 哪些域可用此工具
+  - smart_query
+  - smart_analysis                        # 分析域也可查
+audit:
+  log_args: true
+  log_result: true
+  redact_patterns:                        # 脱敏
+    - "\\b\\d{16,19}\\b"                  # 信用卡号
+    - "\\b\\d{17,18}\\b"                  # 身份证号

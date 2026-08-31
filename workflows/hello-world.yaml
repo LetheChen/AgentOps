@@ -1,0 +1,110 @@
+workflow_id: hello-world
+name: Hello World DAG
+version: 1
+description: |
+  最小端到端测试: 数据采集 → 思考分析 → 输出报告。
+  含 widget 声明，前端能实时看到 widget 更新。
+  
+layout:
+  nodes:
+    fetch:
+      x: 80
+      y: 60
+    think:
+      x: 360
+      y: 60
+    report:
+      x: 640
+      y: 60
+inputs:
+  - name: topic
+    type: string
+    required: true
+    default: AI Agent Platform v2.1
+nodes:
+  fetch:
+    name: 数据采集
+    type: agent
+    agent: echo_agent
+    business_role: 数据采集员
+    harness: deterministic
+    after: []
+    inputs:
+      - topic
+    outputs:
+      fetched:
+        to: "think.in:fetched"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  think:
+    name: 思考分析
+    type: agent
+    agent: echo_agent
+    business_role: 分析专员
+    harness: deterministic
+    after: [fetch]
+    inputs:
+      - topic
+      - fetched
+    outputs:
+      thought:
+        to: "report.in:thought"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  report:
+    name: 输出报告
+    type: agent
+    agent: echo_agent
+    business_role: 报告撰写员
+    harness: deterministic
+    after: [think]
+    inputs:
+      - topic
+      - thought
+    outputs:
+      done:
+        to: ""
+    command_config: null
+    await_command_config: null
+    while_config: null
+widgets:
+  - id: w_progress
+    type: progress_status
+    title: 审核进度
+    emit_on:
+      node: report
+      event: node.completed
+    props: {}
+  - id: w_decision
+    type: task_draft
+    title: 任务清单
+    emit_on:
+      node: report
+      event: node.completed
+    props: {}
+  - id: w_memo
+    type: memo
+    title: 执行报告
+    emit_on:
+      node: report
+      event: node.completed
+    props:
+      text: |
+        本次运行的报告：
+        
+  - id: w_artifacts
+    type: artifact_ref
+    title: 产物
+    emit_on:
+      node: report
+      event: node.completed
+    props: {}
+  - id: w_timeline
+    type: timeline
+    title: 时间线
+    emit_on:
+      node: report
+      event: node.completed
+    props: {}

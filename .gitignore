@@ -1,0 +1,88 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# ===== 审计数据库（运行时生成） =====
+audit.db
+audit.db-wal
+audit.db-shm
+
+# ===== 环境变量（敏感） =====
+.env
+.env.local
+.env.*.local
+
+# ===== 前端 =====
+web/node_modules/
+web/dist/
+web/.vite/
+web/tsconfig.tsbuildinfo
+web/*.log
+
+# ===== 运行时产物（每次 run 产生） =====
+workspace/
+.workflow/
+.uploads/
+
+# ===== 日志 =====
+logs/
+temp/
+.workbuddy/
+*.log
+.test_results.txt
+opencode_server.log
+opencode-server.log
+opencode-server-err.log
+opencode.log
+
+# ===== Node =====
+node_modules/
+
+# ===== IDE / OS =====
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+.playwright-mcp/
+
+# ===== 调试残留 =====
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+tmp.json
+tmp2.json
+runs.json
+
+# ===== 备份 =====
+*_backup_*.py
+*_backup_*.yaml
+*.bak
+
+# ===== 敏感配置防御 =====
+# ~/.agentops 天然在用户主目录，不在仓库内
+.agentops/
+/private/
+/private*.yaml
+
+# ===== 私有设计文档（默认不公开） =====
+# 详细业务设计（OA 集成 / 智能审核 / 致远审批 / 企业微信 / 内网 vLLM 等）
+# 公开版仅保留 docs/00-platform/architecture/* 6 份架构核心 + harness-analysis/ 1 份
+docs/_private/
+
+# ===== Docker =====
+.docker-volumes/
+
+# ===== Git / 编辑器临时 =====
+*.orig
+*.rej

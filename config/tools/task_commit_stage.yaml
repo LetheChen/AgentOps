@@ -1,0 +1,39 @@
+# config/tools/task_commit_stage.yaml
+# V1 任务管理：回写 stage_output + 可选推进状态机
+tool_id: task_commit_stage
+display_name: 提交阶段产出
+description: |
+  回写 task_stages.stage_output（create_stage + commit_stage）。
+  若提供 target_status 则同时推进状态机（需带 if_version）。
+  agent 完成阶段性产出后调用，把变更/拆解/验证结果落库。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    stage_type:
+      type: string
+      description: 阶段类型（discussing/decomposing/coding/validating 等）
+    stage_output:
+      type: string
+      description: 阶段产出内容
+    target_status:
+      type: string
+      description: 若提供则推进状态机到此状态（需同时提供 if_version）
+    if_version:
+      type: integer
+      description: 乐观锁版本号（推进状态机时必需）
+    comment:
+      type: string
+      description: 转移备注（推进时透传）
+  required: [task_id, stage_type]
+handler:
+  module: tools.task_commit_stage
+  function: task_commit_stage
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager, coding_agent, task_planner]
+audit:
+  log_args: true
+  log_result: true

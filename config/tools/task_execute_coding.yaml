@@ -1,0 +1,33 @@
+# config/tools/task_execute_coding.yaml
+# V1 任务管理：派发 coding_agent 执行
+tool_id: task_execute_coding
+display_name: 派发编码执行
+description: |
+  派发 coding_agent 在授权 workspace 沙箱内执行 coding 类任务。
+  校验任务处于 in_progress，装配 prompt（基础铁律 + 任务上下文 + 风格 overlay），
+  创建/复用 terminal 会话，弱关联 task_run。
+  无 harness 工厂时走 mock 模式（返回 mock run_id，不真正起进程）。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID（必须处于 in_progress）
+    style_id:
+      type: string
+      default: default
+      description: 执行风格 ID（agent_styles）
+    if_version:
+      type: integer
+      default: 0
+      description: 乐观锁版本号（可选）
+  required: [task_id]
+handler:
+  module: tools.task_execute_coding
+  function: task_execute_coding
+  config:
+    timeout_seconds: 30
+allowed_domains: [manager, coding_agent]
+audit:
+  log_args: true
+  log_result: true

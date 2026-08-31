@@ -1,0 +1,25 @@
+# config/tools/form_validate.yaml
+tool_id: form_validate
+display_name: 表单校验
+description: 校验 OA 表单字段完整性、格式合法性
+input_schema:
+  type: object
+  properties:
+    form_type:
+      type: string
+      description: 表单类型
+    fields:
+      type: object
+      description: 待校验的表单字段键值对
+      additional_properties: true
+  required: [form_type, fields]
+handler:
+  module: tools.oa_tools
+  function: validate_oa_form
+  config:
+    timeout_seconds: 10
+allowed_domains:
+  - smart_form
+audit:
+  log_args: true
+  log_result: true

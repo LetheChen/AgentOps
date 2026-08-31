@@ -1,0 +1,28 @@
+tool_id: validate_duration
+name: validate_duration
+description: 视频时长与音频校验，检测吞音/长空白/音频重复/资源错位。返回 exit_code=1 表示有阻断错误
+allowed_domains:
+  - video_production
+handler: cli
+command: python "config/knowledge/video-production/validate_duration.py" {project_dir} --target {target} {composition_flag}
+input_schema:
+  type: object
+  properties:
+    project_dir:
+      type: string
+      description: 项目目录路径
+    target:
+      type: integer
+      description: 目标时长（秒）
+    composition_flag:
+      type: string
+      description: 可选，合成标志如 --composition index.html
+  required:
+    - project_dir
+    - target
+outputs:
+  report: stdout
+  exit_code: exit_code
+permission_required: read
+timeout: 30
+working_dir: "{{workspace.root}}"

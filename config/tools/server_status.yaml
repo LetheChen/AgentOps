@@ -1,0 +1,26 @@
+# config/tools/server_status.yaml
+tool_id: server_status
+display_name: 服务器状态
+description: 查询服务器状态（CPU/内存/磁盘/进程）
+input_schema:
+  type: object
+  properties:
+    server_id:
+      type: string
+      description: 服务器标识
+    metrics:
+      type: array
+      items:
+        type: string
+      description: 要查询的指标列表（cpu/memory/disk/process）
+  required: [server_id]
+handler:
+  module: tools.ops_tools
+  function: query_server_status
+  config:
+    timeout_seconds: 10
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true

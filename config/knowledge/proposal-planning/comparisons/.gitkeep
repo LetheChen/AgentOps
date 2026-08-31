@@ -1,0 +1,3 @@
+# 此目录存放 proposal-planning 域的 comparison 页面（技术选型对比等）
+# 每个 comparison 一个 md 文件，例如：tech-selection.md
+# query_kb 的 category=comparisons 查询会 glob 此目录下所有 .md

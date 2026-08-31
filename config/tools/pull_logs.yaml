@@ -1,0 +1,26 @@
+# config/tools/pull_logs.yaml
+# 远程日志拉取工具（paramiko SFTP，log-puller workflow 消费）
+# 按 ~/.agentops/private/log-pull.yaml 的 pull_sources 配置拉取（连接参数在 connections 段），
+# 凭据从 credential_store 解密（id 形如 ssh:<connection_id>）
+# 落盘目标必须是 config/patrol.yaml 的 log_sources 白名单已有 id（工具内双重校验，防路径遍历）
+tool_id: pull_logs
+display_name: 远程日志拉取
+description: 按 pull_sources 配置从远程服务器 SFTP 拉取日志到本地 log_sources 白名单目录（增量：按 size/mtime 位点只拉变化的文件）
+input_schema:
+  type: object
+  properties:
+    pull_source_id:
+      type: string
+      description: 拉取源 ID（对应 ~/.agentops/private/log-pull.yaml 的 pull_sources.id，如 prod-seeyon）
+  required:
+    - pull_source_id
+handler:
+  module: tools.pull_logs
+  function: pull_logs
+  config:
+    timeout_seconds: 120
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true

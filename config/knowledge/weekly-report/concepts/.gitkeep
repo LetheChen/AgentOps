@@ -1,0 +1,3 @@
+# 此目录存放 weekly-report 域的 concept 页面（跨来源技术概念）
+# 每个 concept 一个 md 文件，例如：importance-grading.md
+# query_kb 的 category=concepts 查询会 glob 此目录下所有 .md

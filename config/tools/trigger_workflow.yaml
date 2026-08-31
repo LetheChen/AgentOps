@@ -1,0 +1,46 @@
+# config/tools/trigger_workflow.yaml
+# Manager Agent 专用工具：直接调 orchestrator.run() 触发 workflow，不再绕 bash+curl
+# 解决了 codex harness 在某些会话下未挂载 bash 工具时 LLM 让用户手动 curl 的问题
+tool_id: trigger_workflow
+display_name: 触发预定义工作流
+description: |
+  直接触发一个预定义 workflow（templated / hybrid / conversational / task 四种 run_mode）。
+  这是 Manager Agent 推荐的工作流触发方式：不需要 bash 工具，不需要 curl HTTP 调用，
+  不依赖任何 sandbox/docker。handler 内部直连 orchestrator.run()，等价于 /api/agent/run 端点。
+  返回 {run_id} 后，前端会在组件面板自动显示 DAG 节点进度（通过 SSE 实时推送）。
+
+  workflow_id 必须是 workflows/*.yaml 中真实存在的 workflow 标识
+  （如 log-patrol / video-pipeline / smart-query）。
+  templated / hybrid 模式需要 workflow 存在；本工具主要用于 templated 模式触发预定义 workflow。
+input_schema:
+  type: object
+  properties:
+    workflow_id:
+      type: string
+      description: workflow 标识（如 log-patrol / travel-expense-v1 / customer-support）
+    run_mode:
+      type: string
+      enum: [templated, hybrid, conversational, task]
+      default: templated
+      description: 运行模式；templated/hybrid 需要 workflow_id 存在，conversational/task 需要 agent_id
+    inputs:
+      type: object
+      description: workflow 输入参数（如 log_source_id / time_range / level），随 workflow schema 变化
+      additional_properties: true
+    agent_id:
+      type: string
+      description: conversational/task 模式必填（如 manager / smart_query）
+    initial_message:
+      type: string
+      description: conversational/task 模式必填，作为首轮 user message
+  required: [workflow_id]
+handler:
+  module: tools.trigger_workflow
+  function: trigger_workflow
+  config:
+    timeout_seconds: 30
+allowed_domains:
+  - manager
+audit:
+  log_args: true
+  log_result: true

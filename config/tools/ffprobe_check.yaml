@@ -1,0 +1,33 @@
+# config/tools/ffprobe_check.yaml
+# 视频质检工具 — 用 ffprobe 解析 mp4 元数据，校验时长/分辨率/音轨
+# 对应 tools/ffprobe_check.py，handler 为 dict 格式（{module, function, config}）
+# 供 local_llm harness 通过 function calling 调用
+tool_id: ffprobe_check
+display_name: 视频质检
+description: 用 ffprobe 解析 mp4 元数据，校验时长/分辨率/音轨
+input_schema:
+  type: object
+  properties:
+    mp4_path:
+      type: string
+      description: mp4 文件路径
+    target_duration:
+      type: integer
+      description: 目标时长（秒）
+      default: 60
+    tolerance_seconds:
+      type: integer
+      description: 时长容差（秒）
+      default: 5
+  required:
+    - mp4_path
+handler:
+  module: tools.ffprobe_check
+  function: ffprobe_check
+  config:
+    timeout_seconds: 30
+allowed_domains:
+  - video_production
+audit:
+  log_args: true
+  log_result: true

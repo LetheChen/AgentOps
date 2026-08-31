@@ -1,0 +1,22 @@
+# config/domains/smart_approval.yaml
+domain: smart_approval
+display_name: 智能审批域
+description: 审批流转、审批状态查询、审批规则校验
+default_harness: local_llm
+default_model:
+  provider: openai
+  id: gpt-4o-mini
+default_permissions:
+  allowed_tools:                         # 域级默认允许
+    - approval_flow
+    - approval_query
+  denied_tools:                          # 域级硬禁止（agent 不可覆盖）
+    - sql_query
+    - sql_execute
+    - server_restart
+    - db_migrate
+    - ssh_exec
+    - submit_form
+default_knowledge_bases:
+  - smart_approval_kb
+cost_limit_per_run: 0.2

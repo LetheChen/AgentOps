@@ -1,0 +1,36 @@
+# config/agents/smart_ops.yaml
+agent_id: smart_ops
+domain: smart_ops
+display_name: 智能运维
+description: 服务器运维、数据库管理、监控告警
+harness: codex
+# P0.18.10: T3 — ssh_exec + server_restart + db_migrate 需要执行权限
+tier: T3
+model:
+  provider: minimax
+  id: MiniMax-M2.7
+system_prompt: '你是智能运维专家，负责服务器和数据库管理。
+
+  高危操作（重启/迁移）必须通过 request_human_input 请求人工确认（HIL 文本化 v2）。
+
+  '
+permissions:
+  allowed_tools:
+  - server_status
+  - server_restart
+  - db_migrate
+  - ssh_exec
+  - log_query
+  - finalize
+  - request_cross_domain
+  denied_tools:
+  - sql_query
+  - sql_execute
+  - submit_form
+  - approval_flow
+knowledge_bases:
+- smart_ops_kb
+- shared_kb
+max_concurrent_runs: 1
+timeout_seconds: 3600
+cost_limit_per_run: 2

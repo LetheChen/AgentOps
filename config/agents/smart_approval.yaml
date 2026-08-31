@@ -1,0 +1,31 @@
+# config/agents/smart_approval.yaml
+agent_id: smart_approval
+domain: smart_approval
+display_name: 智能审批
+description: 审批流转、审批状态查询、审批规则校验
+harness: local_llm
+model:
+  provider: minimax
+  id: MiniMax-M3
+system_prompt: '你是智能审批专家，负责审批流程管理和状态查询。
+
+  '
+permissions:
+  allowed_tools:
+  - approval_flow
+  - approval_query
+  - finalize
+  - request_cross_domain
+  denied_tools:
+  - sql_query
+  - sql_execute
+  - server_restart
+  - db_migrate
+  - ssh_exec
+  - submit_form
+knowledge_bases:
+- smart_approval_kb
+- shared_kb
+max_concurrent_runs: 5
+timeout_seconds: 600
+cost_limit_per_run: 0.2

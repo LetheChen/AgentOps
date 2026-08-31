@@ -1,0 +1,395 @@
+/* ============================================================
+   DAG Visualization — v99.5 P0.7
+   ============================================================
+   节点形状 → 颜色映射（CSS 变量驱动；DagNodeShapeRegistry 用 data-tone 切换）。
+   状态叠加（running/completed/failed/cancelled/waiting_for_command/skipped/pending/ready）
+   用 data-status 切换，与形状 tone 解耦——状态决定边框/动效，tone 决定主色。
+
+   兼容性：避免 color-mix()（部分浏览器/Vite 解析器不支持），全部用 rgba() 静态值。
+   ============================================================ */
+
+:root {
+  /* DAG tone 调色板（与 DagNodeSemantics.DagTone 一一对应） */
+  --dag-tone-worker: #3B82F6;
+  --dag-tone-fanout: #06B6D4;
+  --dag-tone-gate: #F59E0B;
+  --dag-tone-loop: #A855F7;
+  --dag-tone-command: #10B981;
+  --dag-tone-wait: #EAB308;
+  --dag-tone-while: #A855F7;
+  --dag-tone-end: #10B981;
+  --dag-tone-fail: #EF4444;
+  --dag-tone-join: #06B6D4;
+  --dag-tone-quorum: #06B6D4;
+  --dag-tone-foreach: #EC4899;
+  --dag-tone-unknown: #94A3B8;
+
+  /* DAG status 视觉（边框颜色 + 透明度） */
+  --dag-status-pending-border: rgba(148, 163, 184, 0.5);
+  --dag-status-ready-border: #FBBF24;
+  --dag-status-running-border: var(--dag-tone, #3B82F6);
+  --dag-status-completed-border: var(--dag-tone, #3B82F6);
+  --dag-status-failed-border: #EF4444;
+  --dag-status-cancelled-border: rgba(148, 163, 184, 0.6);
+  --dag-status-skipped-border: rgba(148, 163, 184, 0.4);
+  --dag-status-waiting-for-command-border: #EAB308;
+}
+
+/* ============================================================
+   卡片容器
+   ============================================================ */
+
+.dag-card {
+  --dag-tone: var(--dag-tone-worker);
+  --dag-tone-soft: rgba(59, 130, 246, 0.16);
+  position: relative;
+  width: 200px;
+  min-height: 92px;
+  background: var(--color-bg-elevated);
+  border: 2px solid var(--dag-status-pending-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  overflow: hidden;
+}
+
+.dag-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-floating);
+}
+
+/* tone -> 主色绑定（13 类） */
+.dag-card.dag-tone-worker { --dag-tone: var(--dag-tone-worker); --dag-tone-soft: rgba(59, 130, 246, 0.16); }
+.dag-card.dag-tone-fanout { --dag-tone: var(--dag-tone-fanout); --dag-tone-soft: rgba(6, 182, 212, 0.16); }
+.dag-card.dag-tone-gate { --dag-tone: var(--dag-tone-gate); --dag-tone-soft: rgba(245, 158, 11, 0.16); }
+.dag-card.dag-tone-loop { --dag-tone: var(--dag-tone-loop); --dag-tone-soft: rgba(168, 85, 247, 0.16); }
+.dag-card.dag-tone-command { --dag-tone: var(--dag-tone-command); --dag-tone-soft: rgba(16, 185, 129, 0.16); }
+.dag-card.dag-tone-wait { --dag-tone: var(--dag-tone-wait); --dag-tone-soft: rgba(234, 179, 8, 0.16); }
+.dag-card.dag-tone-while { --dag-tone: var(--dag-tone-while); --dag-tone-soft: rgba(168, 85, 247, 0.16); }
+.dag-card.dag-tone-end { --dag-tone: var(--dag-tone-end); --dag-tone-soft: rgba(16, 185, 129, 0.16); }
+.dag-card.dag-tone-fail { --dag-tone: var(--dag-tone-fail); --dag-tone-soft: rgba(239, 68, 68, 0.16); }
+.dag-card.dag-tone-join { --dag-tone: var(--dag-tone-join); --dag-tone-soft: rgba(6, 182, 212, 0.16); }
+.dag-card.dag-tone-quorum { --dag-tone: var(--dag-tone-quorum); --dag-tone-soft: rgba(6, 182, 212, 0.16); }
+.dag-card.dag-tone-foreach { --dag-tone: var(--dag-tone-foreach); --dag-tone-soft: rgba(236, 72, 153, 0.16); }
+.dag-card.dag-tone-unknown { --dag-tone: var(--dag-tone-unknown); --dag-tone-soft: rgba(148, 163, 184, 0.12); }
+
+/* status -> 边框 + 动效 */
+.dag-card[data-status='pending'] {
+  border-color: var(--dag-status-pending-border);
+  border-style: dashed;
+  opacity: 0.65;
+}
+.dag-card[data-status='ready'] {
+  border-color: var(--dag-status-ready-border);
+  opacity: 0.8;
+}
+.dag-card[data-status='running'] {
+  border-color: var(--dag-tone);
+  animation: dag-running-pulse 1.5s infinite;
+}
+.dag-card[data-status='completed'] {
+  border-color: var(--dag-tone);
+  opacity: 1;
+}
+.dag-card[data-status='failed'] {
+  border-color: var(--dag-status-failed-border);
+  animation: dag-failed-pulse 1.2s infinite;
+}
+.dag-card[data-status='cancelled'] {
+  border-color: var(--dag-status-cancelled-border);
+  opacity: 0.55;
+}
+.dag-card[data-status='skipped'] {
+  border-color: var(--dag-status-skipped-border);
+  border-style: dashed;
+  opacity: 0.5;
+}
+.dag-card[data-status='waiting_for_command'] {
+  border-color: var(--dag-status-waiting-for-command-border);
+  animation: dag-waiting-blink 1s infinite;
+}
+
+@keyframes dag-running-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--dag-tone-soft, rgba(59, 130, 246, 0.18)); }
+  50% { box-shadow: 0 0 0 10px var(--dag-tone-soft, rgba(59, 130, 246, 0.05)); }
+}
+@keyframes dag-failed-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18); }
+  50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0.06); }
+}
+@keyframes dag-waiting-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.dag-card.dag-card-selected {
+  border-color: var(--dag-tone);
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.25), var(--shadow-floating);
+}
+
+/* ============================================================
+   左侧 shape svg
+   ============================================================ */
+
+.dag-card-shape-wrap {
+  position: relative;
+  width: 64px;
+  min-width: 64px;
+  height: 64px;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dag-shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: var(--dag-tone-soft);
+  stroke: var(--dag-tone);
+  stroke-width: 3;
+  transition: fill 0.2s, stroke 0.2s;
+}
+
+.dag-card[data-status='completed'] .dag-shape {
+  fill: rgba(59, 130, 246, 0.22);
+}
+.dag-card[data-status='failed'] .dag-shape {
+  fill: rgba(239, 68, 68, 0.16);
+  stroke: #EF4444;
+}
+
+.dag-card-glyph {
+  position: relative;
+  z-index: 1;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dag-tone);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+/* ============================================================
+   右侧 label/body/badges
+   ============================================================ */
+
+.dag-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dag-card-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--dag-tone);
+  font-weight: 600;
+}
+
+.dag-card-node-id {
+  font-family: var(--font-mono);
+  color: var(--color-text-tertiary);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-size: 9px;
+  margin-left: auto;
+}
+
+.dag-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dag-card-agent {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   Metric 徽章（5 类）
+   ============================================================ */
+
+.dag-badge-stack {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.dag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+}
+
+.dag-badge[data-tone='info'] {
+  background: var(--state-info-tint);
+  color: var(--color-primary-soft);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+.dag-badge[data-tone='critical'] {
+  background: var(--state-error-tint);
+  color: var(--state-error);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.dag-badge-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* ============================================================
+   Status 右上角徽章
+   ============================================================ */
+
+.dag-status-overlay {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.dag-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 2px solid var(--color-bg-base);
+}
+.dag-status-badge-completed { background: #10B981; }
+.dag-status-badge-failed { background: #EF4444; }
+.dag-status-badge-cancelled { background: #94A3B8; }
+.dag-status-badge-waiting { background: #EAB308; }
+
+/* ============================================================
+   DagLegend（图例）
+   ============================================================ */
+
+.dag-legend {
+  position: relative;
+  width: 220px;
+  background: rgba(11, 15, 20, 0.92);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  backdrop-filter: blur(6px);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.dag-legend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.dag-legend-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.dag-legend-toggle {
+  background: transparent;
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  cursor: pointer;
+}
+.dag-legend-toggle:hover { color: var(--color-text-primary); }
+
+.dag-legend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dag-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dag-legend-shape {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.dag-legend-shape.dag-tone-worker { color: var(--dag-tone-worker); }
+.dag-legend-shape.dag-tone-fanout { color: var(--dag-tone-fanout); }
+.dag-legend-shape.dag-tone-gate { color: var(--dag-tone-gate); }
+.dag-legend-shape.dag-tone-loop { color: var(--dag-tone-loop); }
+.dag-legend-shape.dag-tone-command { color: var(--dag-tone-command); }
+.dag-legend-shape.dag-tone-wait { color: var(--dag-tone-wait); }
+.dag-legend-shape.dag-tone-end { color: var(--dag-tone-end); }
+.dag-legend-shape.dag-tone-fail { color: var(--dag-tone-fail); }
+.dag-legend-shape.dag-tone-join { color: var(--dag-tone-join); }
+.dag-legend-shape.dag-tone-quorum { color: var(--dag-tone-quorum); }
+.dag-legend-shape.dag-tone-foreach { color: var(--dag-tone-foreach); }
+.dag-legend-shape.dag-tone-unknown { color: var(--dag-tone-unknown); }
+
+.dag-legend-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dag-legend-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+}
+
+.dag-legend-concept {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}

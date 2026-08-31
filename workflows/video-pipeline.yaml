@@ -1,0 +1,265 @@
+workflow_id: video-pipeline
+name: AI 视频生产管线
+version: 1.2
+description: |
+  6 步视频生产。搜索→分镜→语音+图像（并行）→校验→合成+渲染→质检。
+  
+workspace:
+  root: "workspace/video-pipeline/{{run_id}}/"
+  structure:
+    data: data/
+    script: script/
+    media_audio: media/audio/
+    media_images: media/images/
+    media_prompts: media/prompts/
+    code: code/
+inputs:
+  - name: topic
+    type: string
+    required: true
+  - name: target_duration
+    type: integer
+    required: true
+    default: "60"
+nodes:
+  search:
+    name: Step 1 · 搜索素材
+    type: agent
+    agent: video_creator
+    business_role: 素材调研员
+    role_prompt: |
+      你是素材调研员，负责从互联网搜索与主题相关的素材，
+      整理成结构化的搜索结果文档。
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: []
+    inputs:
+      - topic
+    outputs:
+      search_results:
+        to: "storyboard.in:search_results"
+  storyboard:
+    name: Step 2 · 分镜+旁白
+    type: agent
+    agent: video_creator
+    business_role: 分镜编剧
+    role_prompt: |
+      你是分镜编剧，负责根据搜索结果创作分镜脚本和旁白文案，
+      控制时长匹配目标。
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: [search]
+    inputs:
+      - search_results
+      - target_duration
+    outputs:
+      storyboard:
+        to:
+          - "tts.in:storyboard"
+          - "image_gen.in:storyboard"
+      narration:
+        to:
+          - "tts.in:narration"
+  tts:
+    name: Step 3a · 语音合成
+    type: agent
+    agent: video_creator
+    business_role: 语音合成员
+    role_prompt: |
+      你是语音合成员，负责将旁白文案合成为场景音频，
+      并记录每段时长。
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: [storyboard]
+    inputs:
+      - narration
+      - storyboard
+    outputs:
+      audio_dir:
+        to: "compose.in:audio_dir"
+      durations_json:
+        to:
+          - "validate.in:durations_json"
+          - "compose.in:durations_json"
+  image_gen:
+    name: Step 3b · 图像生成
+    type: agent
+    agent: video_creator
+    business_role: 图像生成员
+    role_prompt: |
+      你是图像生成员，负责根据分镜脚本为每个场景生成配图。
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: [storyboard]
+    inputs:
+      - storyboard
+    outputs:
+      images_dir:
+        to: "compose.in:images_dir"
+  validate:
+    name: Step 4 · 时长校验
+    type: agent
+    agent: video_creator
+    business_role: 时长校验员
+    role_prompt: |
+      你是时长校验员，负责核对音频时长总和是否匹配目标时长。
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: [tts, image_gen]
+    inputs:
+      - target_duration
+      - durations_json
+    outputs:
+      report:
+        to: "compose.in:validate_report"
+      passed:
+        to: "compose.in:validate_passed"
+  compose:
+    name: Step 5 · 合成+渲染
+    type: agent
+    agent: video_creator
+    business_role: 合成渲染员
+    role_prompt: |
+      你是合成渲染员，负责将分镜、音频、图像合成为最终视频。
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: [validate]
+    inputs:
+      - storyboard
+      - narration
+      - audio_dir
+      - durations_json
+      - images_dir
+      - validate_report
+      - validate_passed
+    outputs:
+      output_mp4:
+        to: "video_validate.in:output_mp4"
+  video_validate:
+    name: Step 6 · 视频质检
+    type: agent
+    agent: video_creator
+    business_role: 视频质检员
+    role_prompt: |
+      你是视频质检专家，负责按以下步骤顺序执行 check → judge → report。
+      
+      全局可用工具：ffprobe_check（mp4 元数据校验）、read_file、write_file、emit_alert（推送监控中心）、finalize。
+      待质检 mp4 路径：{{workspace.root}}output.mp4，目标时长：{{target_duration}} 秒，主题：{{topic}}。
+      
+      === 步骤 1: check（元数据核对）===
+      职责：调用 ffprobe_check 工具核对 mp4 元数据（时长/分辨率/音轨）。
+      铁律：必须真实调用 ffprobe_check 工具，禁止只 thinking。
+      同时用 read_file 读 video-pipeline workspace 下的 script/storyboard 确认原始要求（可选，辅助判定）。
+      ffprobe_check 参数：
+        {"mp4_path": "{{workspace.root}}output.mp4", "target_duration": {{target_duration}}, "tolerance_seconds": 5}
+      
+      === 步骤 2: judge（综合判定）===
+      综合 ffprobe_check 返回结果判定 verdict：
+        - pass：mp4 存在 + ffprobe ok + 时长 ±5s + 有音轨 + 分辨率 > 0
+        - fail：文件缺失 / 损坏 / 时长偏差 > 5s / 无音轨
+        - 需人工：文件存在但 ffprobe 解析异常（如 ffprobe 未安装、JSON 解析失败、returncode 非 0）
+      输出 verdict + failed_checks 数组（取 checks 中 passed=false 的 name 列表）。
+      
+      === 步骤 3: report（写报告 + 推送监控）===
+      1. 调用 write_file 把验证报告 JSON 写到 {{workspace.root}}data/validation-result.json
+      2. 若 verdict=pass：emit_alert(level="info", summary="video OK", run_id=...)
+      3. 若 verdict=fail：emit_alert(level="critical", summary="video FAIL: <failed_checks>", run_id=...)
+      4. 若 verdict=需人工：emit_alert(level="warning", summary="video 需人工确认", run_id=...)
+      5. 调 handoff 传 validation_result 端口
+      6. 立即 finalize
+      
+    harness: local_llm
+    model: minimax/MiniMax-M2.7
+    after: [compose]
+    timeout_seconds: 120
+    inputs:
+      - output_mp4
+      - target_duration
+      - topic
+    outputs:
+      validation_result:
+        to: ""
+widgets:
+  - id: w_search_results
+    type: artifact_ref
+    title: 搜索结果
+    emit_on:
+      node: search
+      event: node.completed
+    props:
+      path: "{{search.search_results}}"
+      format: markdown
+  - id: w_storyboard
+    type: artifact_ref
+    title: 分镜预览
+    emit_on:
+      node: storyboard
+      event: node.completed
+    props:
+      path: "{{storyboard.storyboard}}"
+      format: markdown
+  - id: w_narration
+    type: artifact_ref
+    title: 旁白稿
+    emit_on:
+      node: storyboard
+      event: node.completed
+    props:
+      path: "{{storyboard.narration}}"
+      format: markdown
+  - id: w_audio_table
+    type: table
+    title: 音频时长表
+    emit_on:
+      node: tts
+      event: node.completed
+    props:
+      source: "{{tts.durations_json}}"
+      columns:
+        -           field: scene
+                    label: 场景
+        -           field: duration
+                    label: 时长(秒)
+  - id: w_images_grid
+    type: artifact_ref
+    title: 场景图片
+    emit_on:
+      node: image_gen
+      event: node.completed
+    props:
+      path: "{{image_gen.images_dir}}"
+      format: image_grid
+  - id: w_validate_report
+    type: progress_status
+    title: 校验报告
+    emit_on:
+      node: validate
+      event: node.completed
+    props:
+      source: "{{validate.report}}"
+      show_errors: true
+      show_warnings: true
+  - id: w_video_player
+    type: artifact_ref
+    title: 最终视频
+    emit_on:
+      node: compose
+      event: node.completed
+    props:
+      path: "{{compose.output_mp4}}"
+      mime: video/mp4
+  - id: w_validation_result
+    type: artifact_ref
+    title: 视频质检报告
+    emit_on:
+      node: video_validate
+      event: node.completed
+    props:
+      path: "{{video_validate.validation_result}}"
+      format: json

@@ -1,0 +1,33 @@
+# config/agents/smart_form.yaml
+agent_id: smart_form
+domain: smart_form
+display_name: 智能填单
+description: OA 表单填写、提交、校验
+harness: local_llm
+model:
+  provider: minimax
+  id: MiniMax-M3
+system_prompt: '你是智能填单专家，负责 OA 表单填写和提交。
+
+  填写前必须校验字段完整性，提交前通过 request_human_input 请求用户确认（HIL 文本化 v2）。
+
+  '
+permissions:
+  allowed_tools:
+  - submit_form
+  - form_validate
+  - finalize
+  - request_cross_domain
+  denied_tools:
+  - sql_query
+  - sql_execute
+  - server_restart
+  - db_migrate
+  - ssh_exec
+  - approval_flow
+knowledge_bases:
+- smart_form_kb
+- shared_kb
+max_concurrent_runs: 5
+timeout_seconds: 600
+cost_limit_per_run: 0.2

@@ -1,0 +1,64 @@
+# config/tools/ingest_source.yaml
+# LLM Wiki Ingest 操作工具（Layer B）：把素材沉淀到后端知识库
+# 设计文档：docs/knowledge-base/DESIGN_knowledge_base_module.md §4.2
+# 实现文件：tools/ingest_source.py
+#
+# 三层操作：
+#   1. 写 raw/<timestamp>_<hash>.md（Layer 1 不可变）
+#   2. 更新 index.md（导航枢纽，追加条目）
+#   3. 追加 log.md（时间线枢纽，action 记录）
+#   4. 可选：更新 target_pages（wiki 页面）
+#
+# 不做 LLM 提炼（agent 的职责），工具只做「记账」
+tool_id: ingest_source
+display_name: 知识库 Ingest
+description: |
+  LLM Wiki 的 Ingest 操作。把素材写入后端知识库 config/knowledge/<domain>/：
+  ① raw/<timestamp>_<hash>.md（不可变层）② index.md（导航枢纽，追加条目）
+  ③ log.md（时间线枢纽，action 记录）④ 可选 target_pages（wiki 页面）。
+  两个 agent（content_curator / proposal_planner）在执行过程中
+  产出有价值的内容时调用本工具沉淀。不做 LLM 提炼，只做记账。
+input_schema:
+  type: object
+  properties:
+    domain:
+      type: string
+      enum: [weekly-report, proposal-planning, content-curation]
+      description: 知识库 domain
+    source_path:
+      type: string
+      description: 原始素材路径（vault 内相对路径，与 source_content 二选一）
+    source_content:
+      type: string
+      description: 直接传内容（与 source_path 二选一）
+    source_meta:
+      type: object
+      description: 元数据 {submitter, url, published, title, ...}
+      additional_properties: true
+    page_type:
+      type: string
+      enum: [source, entity, concept, comparison]
+      default: source
+      description: LLM Wiki 四类页面
+    target_pages:
+      type: array
+      items: {type: string}
+      description: 指定要更新的 wiki 页面名（不含扩展名，如 "patterns" / "redis"）
+    page_content:
+      type: string
+      description: 要写入 target_pages 的内容（target_pages 非空时必填）
+    agent_id:
+      type: string
+      description: 调用方 agent id（如 content_curator / proposal_planner）
+  required: [domain]
+handler:
+  module: tools.ingest_source
+  function: ingest_source
+  config:
+    timeout_seconds: 15
+allowed_domains:
+  - content_curator
+  - proposal_planner
+audit:
+  log_args: true
+  log_result: true

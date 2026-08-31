@@ -1,0 +1,25 @@
+# config/tools/submit_form.yaml
+tool_id: submit_form
+display_name: 表单提交
+description: 提交 OA 表单（报销/请假/申请等）
+input_schema:
+  type: object
+  properties:
+    form_type:
+      type: string
+      description: 表单类型（leave_request/expense_report/...）
+    fields:
+      type: object
+      description: 表单字段键值对
+      additional_properties: true
+  required: [form_type, fields]
+handler:
+  module: tools.oa_tools
+  function: submit_oa_form
+  config:
+    timeout_seconds: 30
+allowed_domains:
+  - smart_form
+audit:
+  log_args: true
+  log_result: true

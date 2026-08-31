@@ -1,0 +1,33 @@
+# config/domains/task_management.yaml
+# V1 任务管理域：coding_agent + quality_inspector 共享域
+# 设计文档：docs/product-design/task-manage/DESIGN_task_management_module.md §4.6
+domain: task_management
+display_name: 任务管理域
+description: 任务管理模块执行域，承载编码执行 agent 与验收质检 agent，在授权 workspace 沙箱内完成 coding 任务与交付物验收。
+default_harness: local_llm
+default_model: minimax/MiniMax-M3
+default_permissions:
+  allowed_tools:                           # 域级默认允许
+    - read_file                            # 读取任务描述/交付物/配置
+    - write_file                           # 写中间产物（coding_agent）
+    - task_claim                           # 乐观锁认领
+    - task_commit_stage                    # 阶段提交
+    - task_link_run                        # 关联 run
+    - task_submit_idea                     # 灵感录入
+    - task_submit_report                   # 任务报告
+    - task_execute_coding                  # 编码执行
+    - task_validate                        # 验收判定
+    - task_rollback                        # 三级回退
+    - finalize                             # 内置：节点结束
+  denied_tools:                            # 域级硬禁止（agent 不可覆盖）
+    - task_approval                        # 审批由用户决策，agent 不可代行
+    - task_close                           # 关闭由用户确认，agent 不可自关闭
+    - sql_query                            # 任务管理不直接查业务库
+    - sql_execute                          # 任务管理不改业务数据
+    - server_restart                       # 任务管理不重启服务器
+    - ssh_exec                             # 任务管理不执行 SSH
+    - db_migrate                           # 任务管理不做数据库迁移
+    - wecom_notify                         # 告警专属，任务管理用 task 评论
+    - log_query                            # 巡检专属
+default_knowledge_bases: []                # 任务管理用 read_file 直连 workspace，不走 kb 抽象层
+cost_limit_per_run: 10.0

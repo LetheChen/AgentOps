@@ -1,0 +1,31 @@
+# config/tools/approval_flow.yaml
+tool_id: approval_flow
+display_name: 审批流转
+description: 推进审批流程（提交/批准/驳回/转交）
+input_schema:
+  type: object
+  properties:
+    approval_id:
+      type: string
+      description: 审批单标识
+    action:
+      type: string
+      enum: [approve, reject, forward, submit]
+      description: 审批动作
+    comment:
+      type: string
+      description: 审批意见
+    forward_to:
+      type: string
+      description: 转交目标人（action=forward 时必填）
+  required: [approval_id, action]
+handler:
+  module: tools.oa_tools
+  function: advance_approval_flow
+  config:
+    timeout_seconds: 30
+allowed_domains:
+  - smart_approval
+audit:
+  log_args: true
+  log_result: true

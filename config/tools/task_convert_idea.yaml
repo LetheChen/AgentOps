@@ -1,0 +1,30 @@
+# config/tools/task_convert_idea.yaml
+# V1 任务管理：灵感转任务
+tool_id: task_convert_idea
+display_name: 灵感转任务
+description: |
+  将灵感池中的 idea 转为正式任务（status=backlog）。
+  回写 idea.converted_task_id，原 idea 标记为 converted。
+  标题默认取 idea.content 前 80 字，可显式传入 title 覆盖。
+input_schema:
+  type: object
+  properties:
+    idea_id:
+      type: string
+      description: 灵感 ID
+    task_id:
+      type: string
+      description: 新任务 ID
+    title:
+      type: string
+      description: 任务标题（可选，默认取 idea.content 前 80 字）
+  required: [idea_id, task_id]
+handler:
+  module: tools.task_convert_idea
+  function: task_convert_idea
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager]
+audit:
+  log_args: true
+  log_result: true

@@ -1,0 +1,23 @@
+# config/tools/task_detail_get.yaml
+# P2 配套：任务详情只读查询（分解/调度 agent 上下文获取）
+tool_id: task_detail_get
+display_name: 任务详情查询
+description: |
+  只读查询任务详情：标题/描述/风险/状态/子任务清单/前置依赖。
+  供 task_decomposer（estimate 因子评估）等 agent 获取任务上下文。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+  required: [task_id]
+handler:
+  module: tools.task_detail_get
+  function: task_detail_get
+  config:
+    timeout_seconds: 15
+allowed_domains: [task_management]
+audit:
+  log_args: true
+  log_result: false

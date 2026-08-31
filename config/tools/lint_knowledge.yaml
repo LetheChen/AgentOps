@@ -1,0 +1,64 @@
+# config/tools/lint_knowledge.yaml
+# LLM Wiki Lint 操作工具（Layer B）：content_curator agent 冲突检测核心
+# 设计文档：docs/knowledge-base/DESIGN_content_curator_agent.md §3.3
+# 实现文件：tools/lint_knowledge.py
+#
+# 6 种 check_type：
+#   contradictions: 新内容 vs 历史笔记的候选冲突对（基于关键词重叠，confidence 留空待 LLM 打分）
+#   orphans: 未被引用的实体/概念页
+#   missing_pages: 被引用但不存在的页面（[[xxx]] 链接目标缺失）
+#   index_sync: index.md 条目数 vs raw/ 实际文件数
+#   dead_links: markdown 链接 [text](path) 目标不存在
+#   stale: 过时声明（工具标记可疑项，LLM 判断内容是否过时）
+#
+# 4 类冲突类型（由 LLM 后续判定，工具只输出 candidate）：
+#   fact 事实矛盾 / version 版本差异 / opinion 观点对立 / complement 互补
+#
+# 设计原则：工具只做程序化检查 + 候选输出，不做 LLM 判断（agent 的职责）
+tool_id: lint_knowledge
+display_name: 知识库 Lint
+description: |
+  LLM Wiki Lint 操作工具。content_curator agent 的核心能力是冲突检测（FR-16）：
+  当新内容要归档时，需要先与历史笔记对比，检测 4 类冲突（fact/version/opinion/complement）。
+  本工具做程序化检查（contradictions/orphans/missing_pages/index_sync/dead_links/stale）
+  + 输出结构化候选对，confidence 留空让 LLM 后续打分。auto_fix 仅对 index_sync 生效（标记问题，
+  实际修复需 agent 调 ingest_source 重新 ingest 或人工调整）。
+input_schema:
+  type: object
+  properties:
+    domain:
+      type: string
+      enum: [weekly-report, proposal-planning, content-curation]
+      description: 知识库 domain
+    check_types:
+      type: array
+      items:
+        type: string
+        enum: [contradictions, orphans, missing_pages, stale, index_sync, dead_links]
+      description: 检查类型（默认全部）
+    auto_fix:
+      type: boolean
+      default: false
+      description: 是否自动修复可修复项（仅 index_sync 标记问题，实际修复需 agent 介入）
+    new_content:
+      type: string
+      description: 新内容（contradictions 检查时必填，工具会与历史笔记对比输出候选冲突对）
+    confidence_threshold:
+      type: number
+      default: 0.7
+      description: 冲突检测置信度阈值（Q-5 默认 0.7，LLM 打分 ≥ 此值才报告冲突）
+    agent_id:
+      type: string
+      description: 调用方 agent id（如 content_curator）
+  required: [domain]
+handler:
+  module: tools.lint_knowledge
+  function: lint_knowledge
+  config:
+    timeout_seconds: 30
+allowed_domains:
+  - content_curator
+  - proposal_planner
+audit:
+  log_args: true
+  log_result: true

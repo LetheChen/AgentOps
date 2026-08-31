@@ -1,0 +1,81 @@
+# config/schedules.yaml — 统一定时计划（所有 cron 驱动的自动任务）
+# 唯一键：id（不可变主键，name 仅作展示可任意改名）；由前端「定时计划」页管理
+# inputs 原样透传给 orchestrator.run(workflow_id, inputs)
+# 修改后重启后端生效（不做热加载）
+schedules:
+- id: OA
+  workflow_id: log-patrol
+  name: 致远OA日志巡检
+  cron: '*/30 * * * *'
+  inputs:
+    log_source_id: seeyon
+    time_range: 30m
+    level: ERROR
+  enabled: false
+- id: Nginx
+  workflow_id: log-patrol
+  name: Nginx日志巡检
+  cron: 0 * * * *
+  inputs:
+    log_source_id: nginx
+    time_range: 1h
+    level: ERROR
+  enabled: false
+- id: Redis
+  workflow_id: log-patrol
+  name: Redis日志巡检
+  cron: '*/5 * * * *'
+  inputs:
+    log_source_id: redis
+    time_range: 10m
+    level: WARN
+  enabled: false
+- id: MaxKB_3
+  workflow_id: log-puller
+  name: MaxKB工作日一天3次抽取
+  cron: 0 9,12,18 * * 1-7
+  inputs:
+    pull_source_id: MaxKB
+  enabled: true
+- workflow_id: task-patrol
+  name: "程序存活巡检"
+  cron: "*/5 * * * *"
+  inputs:
+    check_scope: process
+    target_services: agentops_backend,agentops_frontend
+    target_ports: "1987,5173"
+  enabled: false
+  id: schedule
+- workflow_id: task-patrol
+  name: "任务异常巡检"
+  cron: "*/10 * * * *"
+  inputs:
+    check_scope: task
+    time_range: 1h
+  enabled: false
+  id: schedule-2
+- id: schedule-3
+  workflow_id: task-conductor
+  name: 任务阶段演进调度
+  cron: '*/40 * * * *'
+  inputs:
+    inactive_days: 30
+    stuck_days: 7
+    dry_run: false
+  enabled: false
+- id: schedule-4
+  workflow_id: task-dispatcher
+  name: 任务自动派发调度
+  cron: '*/30 * * * *'
+  inputs:
+    project_id: ''
+  enabled: false
+- id: schedule-5
+  workflow_id: log-patrol
+  name: 智能审批巡检
+  cron: 0 10,13,19 * * 1-7
+  inputs:
+    log_source_id: oa_approval
+    time_range: 1h
+    level: ERROR
+  enabled: true

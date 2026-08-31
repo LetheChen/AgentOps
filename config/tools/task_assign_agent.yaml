@@ -1,0 +1,39 @@
+# config/tools/task_assign_agent.yaml
+# V1 任务管理：指派 agent + 风格
+tool_id: task_assign_agent
+display_name: 指派执行 Agent
+description: |
+  更新任务的 assignee_type/assignee_id/assignee_name 与 style_id 字段。
+  带乐观锁 if_version，冲突返回 version_conflict。
+  至少需提供一个 assignee_* 或 style_id 字段。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID
+    if_version:
+      type: integer
+      description: 乐观锁版本号
+    assignee_type:
+      type: string
+      description: 指派对象类型（agent/role/user）
+    assignee_id:
+      type: string
+      description: 指派对象 ID
+    assignee_name:
+      type: string
+      description: 指派对象名称
+    style_id:
+      type: string
+      description: 执行风格 ID（agent_styles）
+  required: [task_id, if_version]
+handler:
+  module: tools.task_assign_agent
+  function: task_assign_agent
+  config:
+    timeout_seconds: 10
+allowed_domains: [manager]
+audit:
+  log_args: true
+  log_result: true

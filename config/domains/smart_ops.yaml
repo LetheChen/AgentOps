@@ -1,0 +1,21 @@
+# config/domains/smart_ops.yaml
+domain: smart_ops
+display_name: 智能运维域
+description: 服务器运维、数据库管理、监控告警
+default_harness: claude_code
+default_model: auto
+default_permissions:
+  allowed_tools:                         # 域级默认允许
+    - server_status
+    - server_restart
+    - db_migrate
+    - ssh_exec
+    - log_query
+  denied_tools:                          # 域级硬禁止（agent 不可覆盖）
+    - sql_query
+    - sql_execute
+    - submit_form
+    - approval_flow
+default_knowledge_bases:
+  - smart_ops_kb
+cost_limit_per_run: 2.0

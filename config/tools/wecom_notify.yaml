@@ -1,0 +1,28 @@
+# config/tools/wecom_notify.yaml
+# 企业微信群机器人推送工具
+# agent 通过 function calling（local_llm harness）或 Bash 调用：python tools/wecom_notify.py --content "告警内容"
+# webhook URL 从环境变量 WECOM_WEBHOOK_URL 读取（敏感信息不进配置文件）
+tool_id: wecom_notify
+display_name: 企业微信推送
+description: 发送企业微信群机器人消息（用于告警/督办通知）。webhook URL 从环境变量 WECOM_WEBHOOK_URL 读取。
+input_schema:
+  type: object
+  properties:
+    content:
+      type: string
+      description: 消息内容（markdown 类型支持企业微信 markdown 语法）
+    msg_type:
+      type: string
+      description: "消息类型: text / markdown（默认 markdown）"
+      default: markdown
+  required:
+    - content
+handler:
+  module: tools.notify_tools
+  function: send_wecom_notification
+  config: {}
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true

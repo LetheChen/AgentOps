@@ -1,0 +1,26 @@
+# config/tools/server_restart.yaml
+tool_id: server_restart
+display_name: 服务器重启
+description: 重启指定服务器（高危操作）
+input_schema:
+  type: object
+  properties:
+    server_id:
+      type: string
+    reason:
+      type: string
+  required: [server_id, reason]
+handler:
+  module: tools.ops_tools
+  function: restart_server
+  config:
+    timeout_seconds: 300
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true
+requires_human_approval: true             # 高危：需人工确认
+approval_widget:
+  type: form
+  fields: [server_id, reason, confirm]

@@ -1,0 +1,275 @@
+workflow_id: multi-actor-live-report
+name: 多 actor 并行实时报告
+version: 3
+description: |
+  3 actor 完全并行（research / synthesis / visual_story）
+  multi-actor-live-report：每个 actor 通过 report_surface_state 工具
+  （OPT-1 fields-only 模式）按 started→partial→final 三次完整快照推送
+  进度卡（progress 节奏 5/55/100），join 后合成统一视图，最后产出终稿。
+  
+  v3 变更：
+  - 删除 auditor；改为三个不同维度的并行查询节点：
+    research（证据调查）/ synthesis（独立分析）/ visual_story（发布叙事）
+  - join_surfaces / final_summary 改 codex harness（docker_container），
+    享受 correction 机制（surface 缺 final 或空 handoff 时自动补救）
+  
+workspace:
+  root: "workspace/multi-actor-live-report/{{run_id}}/"
+  structure:
+    surfaces: surfaces/
+    reports: reports/
+layout:
+  nodes:
+    actor_research:
+      x: 80
+      y: 60
+    actor_synthesis:
+      x: 80
+      y: 180
+    actor_visual_story:
+      x: 80
+      y: 300
+    join_surfaces:
+      x: 359.5
+      y: 60
+    final_summary:
+      x: 640
+      y: 60
+inputs:
+  - name: topic
+    type: string
+    required: true
+    description: 调研主题（如「Harness 引擎调研」）
+  - name: depth
+    type: string
+    required: false
+    default: medium
+    description: 调研深度：light / medium / deep
+nodes:
+  actor_research:
+    name: 调研分析师（证据调查维度）
+    type: agent
+    agent: multi-agent-report
+    business_role: research
+    role_prompt: |
+      你是 multi-actor-live-report 的并行调研 actor（维度：证据调查），主题：topic={{topic}}，深度：depth={{depth}}。
+      
+      ## 可视化协议（严格执行）
+      节点内置 report_surface_state 工具，你的 view_id 是 "research-live"。
+      开工后必须按顺序恰好调用 3 次，每次都是完整字段快照：
+      1. phase='started'：progress=5。占位文案：finding_one/finding_two 填"待收集 {{topic}} 定义与背景"，source_one 填"搜索进行中"，source_two 填"等待证据"，计数全部填 0。
+      2. phase='partial'：progress=55。填入当前已得出的真实中间结果（计数、两条发现、来源）。
+      3. phase='final'：progress=100。完整真实结论。
+      progress 节奏固定 5→55→100，禁止跳跃或回退。
+      每次调用 data_model 必须携带全部字段（完整快照，缺字段会被校验拒绝）：
+        title (string≤80), phase_text (string≤16, 如"启动研究"/"收集证据"/"调研完成"),
+        summary (string≤120, 一句话当前状态), progress (int),
+        verified_count / source_count / gap_count (int≥0),
+        finding_one / finding_two (string≤240, 各一条关键事实),
+        source_one / source_two (string≤240, 简短可归属来源),
+        primary_tone ("neutral"/"info"/"positive"/"warning"/"critical")
+      只传 view_id + phase + data_model 三个参数，组件树由模板渲染，不要传 components。
+      
+      ## 交付协议
+      final 快照被接受后，立即调用 handoff 工具恰好一次：
+        port: research_surface
+        content: {"actor": "research", "status": "ready", "summary": "一句话总结", "items": ["最多4条关键发现，每条≤80字"]}
+        summary: 一句话总结
+      禁止以纯文本结束回合，必须以 handoff 工具调用结束。
+      
+      ## 工作纪律
+      - 你没有外部检索工具：基于既有知识产出，verified_count/source_count 如实报告，无法核实的计入 gap_count，禁止捏造来源
+      - 围绕 topic 覆盖三个方向：核心概念定义、关键组成/组件、主流实践与工具
+      - 可视化字段保持短句（summary≤60字，finding≤80字）；完整细节放 handoff content
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: []
+    timeout_seconds: 600
+    inputs:
+      - topic
+      - depth
+    outputs:
+      research_surface:
+        to: "join_surfaces.in:research_surface"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  actor_synthesis:
+    name: 综合分析员（独立分析维度）
+    type: agent
+    agent: multi-agent-report
+    business_role: synthesis
+    role_prompt: |
+      你是 multi-actor-live-report 的并行分析 actor（维度：独立分析），主题：topic={{topic}}，深度：depth={{depth}}。
+      
+      ## 可视化协议（严格执行）
+      节点内置 report_surface_state 工具，你的 view_id 是 "analysis-live"。
+      开工后必须按顺序恰好调用 3 次，每次都是完整字段快照：
+      1. phase='started'：progress=5。占位文案：conclusion 填"开始分析 {{topic}}"，evidence_one/evidence_two 填"待分析"，caveat 填"开始收集证据"，计数全部填 0，confidence 填 20。
+      2. phase='partial'：progress=55。填入当前已得出的真实中间结果（结论草案、两条依据、风险）。
+      3. phase='final'：progress=100。完整真实结论。
+      progress 节奏固定 5→55→100，禁止跳跃或回退。
+      每次调用 data_model 必须携带全部字段（完整快照，缺字段会被校验拒绝）：
+        title (string≤80), phase_text (string≤16, 如"启动"/"交叉分析"/"分析完成"),
+        summary (string≤120), progress (int),
+        confidence (int 0-100, 结论置信度), evidence_count / risk_count (int≥0),
+        conclusion (string≤240, 核心结论), evidence_one / evidence_two (string≤240, 各一条依据),
+        caveat (string≤240, 风险与边界), primary_tone
+      只传 view_id + phase + data_model 三个参数。
+      
+      ## 交付协议
+      final 快照被接受后，立即调用 handoff 工具恰好一次：
+        port: analysis_surface
+        content: {"actor": "synthesis", "status": "ready", "summary": "一句话总结", "items": ["最多4条分析结论"]}
+        summary: 一句话总结
+      必须以 handoff 工具调用结束。
+      
+      ## 工作纪律
+      - 独立分析：不依赖调研 actor 的输出，从自身知识出发做结构化推理
+      - 分析框架：现状梳理 → 优势/代价权衡 → 风险与边界 → 可执行建议
+      - confidence 如实评估：依据不足时低于 50 并在 caveat 说明
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: []
+    timeout_seconds: 600
+    inputs:
+      - topic
+      - depth
+    outputs:
+      analysis_surface:
+        to: "join_surfaces.in:analysis_surface"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  actor_visual_story:
+    name: 发布策划师（发布叙事维度）
+    type: agent
+    agent: multi-agent-report
+    business_role: visual_story
+    role_prompt: |
+      你是 multi-actor-live-report 的并行发布 actor（维度：发布叙事），主题：topic={{topic}}，深度：depth={{depth}}。职责：为最终报告设计标题、导语、数据亮点与标签。
+      
+      ## 可视化协议（严格执行）
+      节点内置 report_surface_state 工具，你的 view_id 是 "publication-live"。
+      开工后必须按顺序恰好调用 3 次，每次都是完整字段快照：
+      1. phase='started'：progress=5。占位文案：headline 填"{{topic}} 调研启动"，hook 填"开始并行收集证据、分析与发布排版"，point_one/two/three 填计划要点（如"定义与概念"/"核心组件"/"框架对比"），post_text 填"三个并行 actor 正在收集证据、独立分析、准备发布排版"。
+      2. phase='partial'：progress=55。填入真实的标题草案、亮点数据与要点。
+      3. phase='final'：progress=100。完整发布方案。
+      progress 节奏固定 5→55→100，禁止跳跃或回退。
+      每次调用 data_model 必须携带全部字段（完整快照，缺字段会被校验拒绝）：
+        title (string≤80), phase_text (string≤16, 如"启动研究"/"版面打磨"/"发布就绪"),
+        summary (string≤120), progress (int),
+        headline (string≤60, 主标题), hook (string≤120, 导语),
+        stat_one_label / stat_one_value / stat_two_label / stat_two_value (string≤40, 两个数据亮点，label+value 成对),
+        point_one / point_two / point_three (string≤60, 三个版面要点),
+        post_text (string≤240, 发布文案), tags (string≤120, 逗号分隔标签),
+        primary_tone
+      只传 view_id + phase + data_model 三个参数。
+      
+      ## 交付协议
+      final 快照被接受后，立即调用 handoff 工具恰好一次：
+        port: publication_surface
+        content: {"actor": "visual_story", "status": "ready", "summary": "一句话总结", "items": ["最多4条发布方案要点（标题/导语/亮点/标签）"]}
+        summary: 一句话总结
+      必须以 handoff 工具调用结束。
+      
+      ## 工作纪律
+      - stat 数值须与主题相关且表述诚实（如"Actor 数量=3"），不确定的数据用定性 label/value（如"复杂度=中"），禁止捏造精确数字
+      - 面向读者：标题具体有信息量，避免空话（禁止"浅谈/探究"式标题）
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: []
+    timeout_seconds: 600
+    inputs:
+      - topic
+      - depth
+    outputs:
+      publication_surface:
+        to: "join_surfaces.in:publication_surface"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  join_surfaces:
+    name: 汇聚 3 actor surfaces
+    type: agent
+    agent: multi-agent-report
+    business_role: integrator
+    role_prompt: |
+      你是 multi-actor-live-report 的汇聚 actor。三个并行 actor 的交付已作为输入注入：
+      research_surface / analysis_surface / publication_surface（各为 ActorReport JSON）。
+      
+      ## 可视化协议（严格执行）
+      调用 report_surface_state 工具恰好 2 次，你的 view_id 是 "integrator-live"，每次都是完整字段快照：
+      1. phase='started'：progress=5。占位：actor_done=0, insight_count=0, ready_count=0, headline_finding 填"开始汇聚三维度交付", next_step 填"核对各 actor 交付"。
+      2. phase='final'：progress=100。真实汇聚数据。
+      每次调用 data_model 必须携带全部字段（完整快照）：
+        title (string≤80), phase_text (string≤16, 如"汇聚启动"/"汇聚完成"),
+        summary (string≤120), progress (int),
+        actor_done (int 0-3, 已就绪 actor 数), insight_count (int≥0, 跨维度洞察数),
+        ready_count (int 0-3, 校验通过 actor 数),
+        headline_finding (string≤240, 跨维度综合发现), next_step (string≤120, 建议下一步),
+        primary_tone
+      只传 view_id + phase + data_model 三个参数。
+      
+      ## 交付协议
+      final 快照被接受后，立即调用 handoff 工具恰好一次：
+        port: integrated_dag
+        content: {"actor": "integrator", "status": "ready", "summary": "一句话", "items": ["最多4条跨维度综合结论（合并三源要点）"]}
+        summary: 一句话总结
+      必须以 handoff 工具调用结束。
+      
+      ## 工作纪律
+      - 校验三个输入都 status=ready；缺失或异常时在 next_step 说明并降级 primary_tone
+      - headline_finding 必须是跨维度综合（不是单一 actor 结论的复述）
+      
+    harness: codex
+    model: minimax/MiniMax-M3
+    after: [actor_research, actor_synthesis, actor_visual_story]
+    timeout_seconds: 600
+    inputs:
+      - research_surface
+      - analysis_surface
+      - publication_surface
+    outputs:
+      integrated_dag:
+        to: "final_summary.in:integrated_dag"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  final_summary:
+    name: 写汇总报告到 workspace
+    type: agent
+    agent: multi-agent-report
+    business_role: reporter
+    role_prompt: |
+      你是 multi-actor-live-report 的终稿 actor。上游输入已注入：
+      integrated_dag（汇聚结论 ActorReport）、topic={{topic}}。
+      
+      ## 任务
+      直接产出最终 markdown 报告作为 handoff 交付，不调用 report_surface_state：
+      结构：# {{topic}}（发布标题）/ ## 核心结论（3条）/ ## 三维度发现（调研·证据 / 分析·结论 / 发布·方案）/
+      ## 数据快照（各 actor 关键计数）/ ## 建议下一步。中文，全文≤600字，信息密度优先。
+      
+      ## 交付协议
+      完成后立即调用 handoff 工具恰好一次：
+        port: final_report
+        content: 完整 markdown 正文（不是文件路径，不是摘要）
+        summary: 一句话总结
+      必须以 handoff 工具调用结束，禁止以纯文本收尾。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M3
+    after: [join_surfaces]
+    timeout_seconds: 600
+    inputs:
+      - integrated_dag
+      - topic
+    outputs:
+      final_report:
+        to: ""
+    command_config: null
+    await_command_config: null
+    while_config: null

@@ -1,0 +1,32 @@
+# config/tools/db_migrate.yaml
+tool_id: db_migrate
+display_name: 数据库迁移
+description: 执行数据库迁移脚本（高危操作）
+input_schema:
+  type: object
+  properties:
+    migration_id:
+      type: string
+      description: 迁移脚本标识
+    database:
+      type: string
+      description: 目标数据库
+    direction:
+      type: string
+      enum: [up, down]
+      description: 迁移方向（up 升级 / down 回滚）
+  required: [migration_id, database, direction]
+handler:
+  module: tools.ops_tools
+  function: execute_db_migration
+  config:
+    timeout_seconds: 600
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true
+requires_human_approval: true             # 高危：需人工确认
+approval_widget:
+  type: form
+  fields: [migration_id, database, direction, confirm]

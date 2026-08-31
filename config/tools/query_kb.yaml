@@ -1,0 +1,56 @@
+# config/tools/query_kb.yaml
+# 通用知识库查询工具（Layer B，多 domain 支持）
+# 设计文档：docs/knowledge-base/DESIGN_content_curator_agent.md §3.4
+# 实现文件：tools/query_kb.py
+#
+# 与视频生产专用版 query_knowledge.yaml 的区别：
+#   - 视频生产版：4 个固定 category（narration_style/storyboard_format/image_prompts/composition_design）
+#   - 通用版（query_kb）：按 domain 动态路由，category 由 AGENTS.md 定义
+#   - 视频生产版有 prompt-templates 样本查询，通用版无（按需扩展）
+#
+# 三种查询模式：
+#   1. category 指定 → 列举该类别下所有页面
+#   2. query 指定 → 关键词搜索（全文匹配）
+#   3. 都不指定 → 只返回 index.md 导航 + log.md 最近 10 条
+tool_id: query_kb
+display_name: 知识库查询（通用版）
+description: |
+  通用知识库查询工具。两个个人助理 agent（content_curator / proposal_planner）
+  查询历史笔记、实体/概念页、对比页时调用。按 domain 路由到 config/knowledge/<domain>/，
+  支持 5 种 category（patterns/cases/entities/concepts/comparisons）和关键词搜索。
+  同时返回 index.md 导航摘要 + log.md 最近 10 条操作记录。
+  与视频生产专用版 query_knowledge 解耦（向后兼容，不动视频生产域）。
+input_schema:
+  type: object
+  properties:
+    domain:
+      type: string
+      enum: [weekly-report, proposal-planning, content-curation, smart-query]
+      description: 知识库 domain
+    category:
+      type: string
+      enum: [patterns, cases, entities, concepts, comparisons]
+      description: 限定类别（patterns.md 单文件 / cases/entities/concepts/comparisons 目录）
+    query:
+      type: string
+      description: 关键词查询（全文搜索，优先级高于 category）
+    max_results:
+      type: integer
+      default: 10
+      description: 返回上限
+    agent_id:
+      type: string
+      description: 调用方 agent id（如 content_curator / proposal_planner）
+  required: [domain]
+handler:
+  module: tools.query_kb
+  function: query_kb
+  config:
+    timeout_seconds: 15
+allowed_domains:
+  - content_curator
+  - proposal_planner
+  - smart_query
+audit:
+  log_args: true
+  log_result: true

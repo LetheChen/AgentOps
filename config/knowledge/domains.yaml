@@ -1,0 +1,99 @@
+# 知识域配置清单（可配置 · 替代 tools/ 中硬编码的 DOMAIN_MAP）
+#
+# 作用：
+#   1. tools/ingest_source.py / tools/query_kb.py / tools/lint_knowledge.py 启动时读此文件，
+#      替代模块顶部硬编码的 DOMAIN_MAP，实现「新增 domain 只改 yaml 不改代码」
+#   2. 前端 KnowledgeHubPage 的「知识库仪表盘」Tab 直接读此文件渲染 domain 卡片
+#   3. 前端「添加知识域」按钮写入此文件 + 调后端 init API 创建目录骨架
+#
+# schema 类型：
+#   llm_wiki         — 标准 Karpathy LLM Wiki 三层（raw/ + entities/ + concepts/ + comparisons/ + index.md + log.md）
+#   video_production — 异构 schema（references/ + prompt-templates/，不走 LLM Wiki 模式）
+#
+# category_layout：
+#   single_file  — 该 category 是单文件（如 patterns.md），query_kb 用 Path(domain)/pattern.md 读
+#   directory    — 该 category 是目录（如 entities/），query_kb 用 Path(domain)/category/*.md glob
+
+vault_root: "E:\\Document"
+
+write_whitelist:
+  - "Articles\\"
+  - "Reports\\"
+  - "Notes\\"
+  - "Weekly\\"
+  - "Images\\"
+
+domains:
+  weekly-report:
+    display_name: "周报助手知识库"
+    description: "周报生成模式、写作规范、重要度分级、去 AI 味样例"
+    kb_root: "config/knowledge/weekly-report"
+    vault_write_dir: "Weekly"
+    schema: "llm_wiki"
+    categories: [patterns, entities, concepts, comparisons]
+    category_layout:
+      patterns: single_file
+      entities: directory
+      concepts: directory
+      comparisons: directory
+    supports_lint: true
+    bound_agents: [content_curator]
+
+  proposal-planning:
+    display_name: "方案策划知识库"
+    description: "方案案例、设计原则、技术选型对比"
+    kb_root: "config/knowledge/proposal-planning"
+    vault_write_dir: "Reports"
+    schema: "llm_wiki"
+    categories: [patterns, cases, entities, concepts, comparisons]
+    category_layout:
+      patterns: single_file
+      cases: directory
+      entities: directory
+      concepts: directory
+      comparisons: directory
+    supports_lint: true
+    bound_agents: [proposal_planner]
+
+  content-curation:
+    display_name: "内容策展知识库"
+    description: "技术实体、跨源概念、版本对比、来源溯源"
+    kb_root: "config/knowledge/content-curation"
+    vault_write_dir: "Articles"
+    schema: "llm_wiki"
+    categories: [patterns, entities, concepts, comparisons]
+    category_layout:
+      patterns: single_file
+      entities: directory
+      concepts: directory
+      comparisons: directory
+    supports_lint: true
+    bound_agents: [content_curator]
+
+  video-production:
+    display_name: "视频生产知识库"
+    description: "视频生产 references（排版/分镜/旁白/图像 prompt）+ prompt 模板样本"
+    kb_root: "config/knowledge/video-production"
+    vault_write_dir: null
+    schema: "video_production"
+    categories: [references, prompt-templates]
+    category_layout:
+      references: single_file
+      prompt-templates: directory
+    supports_lint: false
+    bound_agents: [video_creator]
+    note: "异构 schema，不走 LLM Wiki 模式，由专用 query_knowledge.py 服务（非通用 query_kb.py）"
+
+  smart-query:
+    display_name: "智能问数知识库"
+    description: "业务术语映射、表关系、枚举取值、指标口径（information_schema 字段字典之外的业务语义）"
+    kb_root: "config/knowledge/smart-query"
+    vault_write_dir: null
+    schema: "llm_wiki"
+    categories: [patterns, concepts]
+    category_layout:
+      patterns: single_file
+      concepts: directory
+    supports_lint: false
+    bound_agents: [smart_query]
+

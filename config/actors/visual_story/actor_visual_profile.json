@@ -1,0 +1,50 @@
+{
+  "actor_id": "visual_story",
+  "description": "发布策划师（发布叙事维度）：三次完整快照推送标题、导语、数据亮点与标签方案",
+  "allowed_surface_views": [
+    {
+      "view_id": "publication-live",
+      "output_contract": "ActorReport",
+      "description": "发布实时面板 — 主标题、导语、数据亮点、版面要点与标签",
+      "required_phases": ["started", "partial", "final"],
+      "fields": {
+        "title": {"type": "string", "required": true, "max_length": 80},
+        "phase_text": {"type": "string", "required": true, "max_length": 16},
+        "summary": {"type": "string", "required": true, "max_length": 120},
+        "progress": {"type": "integer", "required": true, "min": 0, "max": 100},
+        "headline": {"type": "string", "required": true, "max_length": 60},
+        "hook": {"type": "string", "required": true, "max_length": 120},
+        "stat_one_label": {"type": "string", "required": true, "max_length": 40},
+        "stat_one_value": {"type": "string", "required": true, "max_length": 40},
+        "stat_two_label": {"type": "string", "required": true, "max_length": 40},
+        "stat_two_value": {"type": "string", "required": true, "max_length": 40},
+        "point_one": {"type": "string", "required": true, "max_length": 60},
+        "point_two": {"type": "string", "required": true, "max_length": 60},
+        "point_three": {"type": "string", "required": true, "max_length": 60},
+        "post_text": {"type": "string", "required": true, "max_length": 240},
+        "tags": {"type": "string", "required": true, "max_length": 120},
+        "primary_tone": {"type": "enum", "required": true, "values": ["neutral", "info", "positive", "warning", "critical"]}
+      },
+      "template": [
+        {"id": "root", "component": "Column", "children": ["badge", "bar", "summary_text", "headline", "hook", "stat_grid", "points", "post", "tags"]},
+        {"id": "badge", "component": "AoStatusBadge", "text": "$title", "tone": "$primary_tone"},
+        {"id": "bar", "component": "AoProgress", "label": "$phase_text", "value": "$progress"},
+        {"id": "summary_text", "component": "Text", "text": "$summary"},
+        {"id": "headline", "component": "AoSection", "title": "主标题", "children": ["headline_text"]},
+        {"id": "headline_text", "component": "Text", "text": "$headline"},
+        {"id": "hook", "component": "AoDisclosure", "title": "导语", "children": ["hook_text"]},
+        {"id": "hook_text", "component": "Text", "text": "$hook"},
+        {"id": "stat_grid", "component": "AoGrid", "children": ["s1", "s2"], "columns": {"default": 2}},
+        {"id": "s1", "component": "AoMetric", "label": "$stat_one_label", "value": "$stat_one_value"},
+        {"id": "s2", "component": "AoMetric", "label": "$stat_two_label", "value": "$stat_two_value"},
+        {"id": "points", "component": "AoDisclosure", "title": "版面要点", "children": ["p1_text", "p2_text", "p3_text"]},
+        {"id": "p1_text", "component": "Text", "text": "$point_one"},
+        {"id": "p2_text", "component": "Text", "text": "$point_two"},
+        {"id": "p3_text", "component": "Text", "text": "$point_three"},
+        {"id": "post", "component": "AoDisclosure", "title": "发布文案", "children": ["post_text_node"]},
+        {"id": "post_text_node", "component": "Text", "text": "$post_text"},
+        {"id": "tags", "component": "AoStatusBadge", "text": "$tags", "tone": "neutral"}
+      ]
+    }
+  ]
+}

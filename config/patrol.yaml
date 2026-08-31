@@ -1,0 +1,57 @@
+# config/patrol.yaml
+# Patroller 巡检配置 —— 替代代码硬编码定时，支持多业务不同节奏
+#
+# 加载顺序：api/server.py lifespan → Patroller.__init__ → 读取本文件
+# 不存在时回退到代码默认值（60s DAG 巡检 / 1h 日志巡检）
+# 修改后需重启服务才生效（不做热加载，避免运行中定时器漂移）
+
+# ── DAG run 巡检（扫 RUNNING 状态超时的 run）──────────────────
+dag_run_patrol:
+  interval_seconds: 60          # 每 60s 扫一次 runs 表
+  stale_threshold_seconds: 1800 # 30 分钟无事件视为超时
+
+# ── dormant 会话自动归档 ─────────────────────────────────────
+dormant_archive:
+  enabled: true
+  archive_after_days: 3         # dormant 超 3 天自动设 archived_at（软归档）
+
+# ── 日志巡检定时触发（cron 表达式驱动，支持多业务不同节奏）──────
+# cron 格式：标准 5 字段 "minute hour day-of-month month day-of-week"
+#   */N 表示每 N 个单位；* 表示任意；, 表示列表；- 表示区间
+# 例：
+#   "*/30 * * * *"   每 30 分钟
+#   "0 * * * *"       每小时整点
+#   "*/5 * * * *"     每 5 分钟
+#   "0 9 * * 1-5"     工作日每天 9 点
+log_sources:
+- id: seeyon
+  name: "致远 OA"
+  path: ./logs/seeyon
+  description: "致远 OA 智能审批系统运行日志（本地开发用 ./logs/seeyon，生产改 /var/log/agentops_sources/seeyon）"
+  allow_read: true
+  allow_list: true
+
+- id: oa_approval
+  name: OA 审批
+  path: ./logs/oa_approval
+  description: OA 审批日志（本地开发用 ./logs/oa_approval，生产改 /var/log/agentops_sources/oa_approval）
+  allow_read: true
+  allow_list: true
+- id: nginx
+  name: "Nginx"
+  path: ./logs/nginx
+  description: "Nginx 访问与错误日志（本地开发用 ./logs/nginx，生产改 /var/log/agentops_sources/nginx）"
+  allow_read: true
+  allow_list: true
+
+- id: redis
+  name: "Redis"
+  path: ./logs/redis
+  description: "Redis 服务器日志（本地开发用 ./logs/redis，生产改 /var/log/agentops_sources/redis）"
+  allow_read: true
+  allow_list: true
+
+# ── 日志拉取源（远程服务器 → 本地目录映射，log-puller workflow 消费）──
+# 凭据（密码/私钥口令）不在这里：加密存 credential_store（key 前缀 ssh:<id>）
+# local.log_source_id 必须是上面 log_sources 白名单已有的 id，否则加载时报错
+# 设计文档：docs/business-designs/log-puller-architecture.md

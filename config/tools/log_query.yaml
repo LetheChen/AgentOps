@@ -1,0 +1,45 @@
+# config/tools/log_query.yaml
+# 日志扫描工具（本地文件版）
+# agent 通过 Bash 调用：python tools/log_query.py --log-dir <dir> [--keyword <kw>] [--time-range 1h] [--lines 500]
+# 扫描指定目录下所有日志文件（支持子目录按业务系统分类），返回匹配关键字的日志行
+tool_id: log_query
+display_name: 日志扫描
+description: 扫描本地日志目录下所有日志文件（支持子目录按业务系统分类），返回匹配关键字或级别的日志行
+input_schema:
+  type: object
+  properties:
+    log_source_id:
+      type: string
+      description: 日志源 ID（白名单授权，对应 config/patrol.yaml 的 log_sources.id，如 seeyon/nginx/redis）。优先于 log_dir
+    log_dir:
+      type: string
+      description: 日志根目录路径（直接指定路径时使用，其下子目录按业务系统分类，如 seeyon/、nginx/、redis/）。未授权路径会被拒绝
+    keyword:
+      type: string
+      description: 搜索关键词（可选，不传则返回所有 ERROR 及以上级别日志）
+    level:
+      type: string
+      description: "日志级别过滤: ERROR / WARN / FATAL / CRITICAL（可选，默认 ERROR）"
+      default: ERROR
+    time_range:
+      type: string
+      description: 时间范围（如 1h/24h/7d，默认 24h）
+      default: 24h
+    lines:
+      type: integer
+      description: 返回最大行数
+      default: 500
+  required: []
+handler:
+  module: tools.ops_tools
+  function: query_logs
+  config:
+    max_lines: 5000
+    timeout_seconds: 30
+    # log_sources 白名单配置路径（不传则用 config/patrol.yaml）
+    patrol_config_path: config/patrol.yaml
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true

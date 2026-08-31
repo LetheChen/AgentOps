@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentOps 生成式 UI 演示面板 · Chart.js 折线图</title>
+  <!-- Chart.js 4.x CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #0f1115;
+      color: #e6e6e6;
+      padding: 24px;
+      min-height: 100vh;
+    }
+    .header {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #1a1d24 0%, #232730 100%);
+      border: 1px solid #2a2f3a;
+      border-radius: 12px;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .header .subtitle {
+      font-size: 13px;
+      color: #8b92a0;
+      line-height: 1.6;
+    }
+    .header .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #2563eb;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .card {
+      background: #1a1d24;
+      border: 1px solid #2a2f3a;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card.full { grid-column: 1 / -1; }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon { font-size: 16px; }
+    .card-desc {
+      font-size: 12px;
+      color: #8b92a0;
+      margin-bottom: 16px;
+    }
+    .chart-wrapper {
+      position: relative;
+      height: 320px;
+    }
+    .json-block {
+      background: #0a0c10;
+      border: 1px solid #232730;
+      border-radius: 6px;
+      padding: 14px;
+      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #a8b1c0;
+      overflow: auto;
+      max-height: 360px;
+      white-space: pre;
+    }
+    .json-key { color: #7dd3fc; }
+    .json-string { color: #86efac; }
+    .json-number { color: #fcd34d; }
+    .json-bool { color: #f9a8d4; }
+    .footer {
+      max-width: 1200px;
+      margin: 24px auto 0;
+      padding: 14px 20px;
+      background: #1a1d24;
+      border: 1px solid #2a2f3a;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #8b92a0;
+      line-height: 1.6;
+    }
+    .footer code {
+      background: #0a0c10;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #fcd34d;
+      font-family: "JetBrains Mono", monospace;
+    }
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>AgentOps 生成式 UI 演示面板 <span class="badge">Chart.js</span></h1>
+    <div class="subtitle">
+      此面板用于在 widget 渲染链路（HtmlWidget iframe sandbox 禁用 JS）不可用时，<br/>
+      以独立 HTML 形式展示 Manager Agent 可产出的可视化数据。浏览器直接打开即可查看，无需后端。
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- 折线图：token 用量趋势 -->
+    <div class="card full">
+      <div class="card-title"><span class="icon">📈</span> Token 用量趋势（近 7 天）</div>
+      <div class="card-desc">input_tokens / output_tokens 双折线，对应 WidgetRenderer 的 chart widget (chart_type=line)</div>
+      <div class="chart-wrapper">
+        <canvas id="lineChart"></canvas>
+      </div>
+    </div>
+
+    <!-- 柱状图：provider 分布 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span> Provider Token 分布</div>
+      <div class="card-desc">各 provider 的总 token 占比，对应 chart widget (chart_type=bar)</div>
+      <div class="chart-wrapper">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+
+    <!-- 饼图：run mode 分布 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🥧</span> Run Mode 分布</div>
+      <div class="card-desc">templated / conversational / hybrid / task 占比</div>
+      <div class="chart-wrapper">
+        <canvas id="pieChart"></canvas>
+      </div>
+    </div>
+
+    <!-- JSON 数据展示区（方便调试） -->
+    <div class="card full">
+      <div class="card-title"><span class="icon">🔍</span> 原始数据（Manager Agent emit_widget 应产出的结构）</div>
+      <div class="card-desc">对应 emit_widget 工具的 data 负载，前端 WidgetRenderer.ChartWidget 应消费此结构渲染</div>
+      <pre class="json-block" id="jsonData"></pre>
+    </div>
+  </div>
+
+  <div class="footer">
+    <strong>访问方式：</strong>
+    1) 直接 file:// 打开本文件；2) 通过 vite dev server 访问 <code>http://localhost:5173/demo/chart-demo.html</code><br/>
+    <strong>下一步：</strong>验证 Chart.js 渲染正常后，可把此数据结构对齐到 <code>config/tools/emit_widget.yaml</code> 的 schema，让 Manager Agent 通过 emit_widget 推送 chart widget 到右栏生成式 UI 面板。
+  </div>
+
+  <script>
+    // ===== Demo 数据（模拟 GET /api/usage/summary 聚合后的结构）=====
+    const usageData = {
+      by_date: [
+        { date: '2026-07-26', provider_id: 'minimax', input_tokens: 12500, output_tokens: 8200, cost_usd: 0.12 },
+        { date: '2026-07-27', provider_id: 'minimax', input_tokens: 18900, output_tokens: 12300, cost_usd: 0.18 },
+        { date: '2026-07-28', provider_id: 'minimax', input_tokens: 9800,  output_tokens: 6500,  cost_usd: 0.09 },
+        { date: '2026-07-29', provider_id: 'minimax', input_tokens: 24300, output_tokens: 15800, cost_usd: 0.24 },
+        { date: '2026-07-30', provider_id: 'minimax', input_tokens: 31200, output_tokens: 20500, cost_usd: 0.31 },
+        { date: '2026-07-31', provider_id: 'minimax', input_tokens: 27800, output_tokens: 18200, cost_usd: 0.27 },
+        { date: '2026-08-01', provider_id: 'minimax', input_tokens: 15600, output_tokens: 9800,  cost_usd: 0.15 },
+      ],
+      by_provider: [
+        { provider_id: 'minimax',       tokens: 248400, cost_usd: 1.36 },
+        { provider_id: 'deepseek',      tokens: 89200,  cost_usd: 0.42 },
+        { provider_id: 'openai',        tokens: 45600,  cost_usd: 0.91 },
+        { provider_id: 'anthropic',     tokens: 32100,  cost_usd: 0.78 },
+      ],
+      by_run_mode: [
+        { run_mode: 'templated',     count: 42 },
+        { run_mode: 'conversational', count: 28 },
+        { run_mode: 'hybrid',         count: 11 },
+        { run_mode: 'task',           count: 6  },
+      ],
+    };
+
+    // ===== Chart.js 全局默认 =====
+    Chart.defaults.color = '#8b92a0';
+    Chart.defaults.borderColor = '#2a2f3a';
+    Chart.defaults.font.family = '-apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+
+    // ===== 折线图 =====
+    new Chart(document.getElementById('lineChart'), {
+      type: 'line',
+      data: {
+        labels: usageData.by_date.map(d => d.date.slice(5)),
+        datasets: [
+          {
+            label: 'Input Tokens',
+            data: usageData.by_date.map(d => d.input_tokens),
+            borderColor: '#60a5fa',
+            backgroundColor: 'rgba(96, 165, 250, 0.15)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          },
+          {
+            label: 'Output Tokens',
+            data: usageData.by_date.map(d => d.output_tokens),
+            borderColor: '#34d399',
+            backgroundColor: 'rgba(52, 211, 153, 0.15)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: '#e6e6e6', usePointStyle: true, padding: 16 } },
+          tooltip: {
+            backgroundColor: '#0a0c10',
+            titleColor: '#fff',
+            bodyColor: '#a8b1c0',
+            borderColor: '#2a2f3a',
+            borderWidth: 1,
+            padding: 12,
+            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} tokens` },
+          },
+        },
+        scales: {
+          x: { grid: { color: '#232730' }, ticks: { color: '#8b92a0' } },
+          y: {
+            grid: { color: '#232730' },
+            ticks: { color: '#8b92a0', callback: (v) => v >= 1000 ? (v / 1000) + 'k' : v },
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+
+    // ===== 柱状图 =====
+    new Chart(document.getElementById('barChart'), {
+      type: 'bar',
+      data: {
+        labels: usageData.by_provider.map(p => p.provider_id),
+        datasets: [{
+          label: 'Tokens',
+          data: usageData.by_provider.map(p => p.tokens),
+          backgroundColor: ['#60a5fa', '#a78bfa', '#f472b6', '#fbbf24'],
+          borderRadius: 6,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0a0c10',
+            titleColor: '#fff',
+            bodyColor: '#a8b1c0',
+            borderColor: '#2a2f3a',
+            borderWidth: 1,
+            padding: 12,
+            callbacks: { label: (ctx) => ` ${ctx.parsed.y.toLocaleString()} tokens` },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#8b92a0' } },
+          y: {
+            grid: { color: '#232730' },
+            ticks: { color: '#8b92a0', callback: (v) => v >= 1000 ? (v / 1000) + 'k' : v },
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+
+    // ===== 饼图 =====
+    new Chart(document.getElementById('pieChart'), {
+      type: 'doughnut',
+      data: {
+        labels: usageData.by_run_mode.map(r => r.run_mode),
+        datasets: [{
+          data: usageData.by_run_mode.map(r => r.count),
+          backgroundColor: ['#60a5fa', '#34d399', '#fbbf24', '#f472b6'],
+          borderColor: '#1a1d24',
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: '#e6e6e6', usePointStyle: true, padding: 12 } },
+          tooltip: {
+            backgroundColor: '#0a0c10',
+            titleColor: '#fff',
+            bodyColor: '#a8b1c0',
+            borderColor: '#2a2f3a',
+            borderWidth: 1,
+            padding: 12,
+            callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed} 次` },
+          },
+        },
+      },
+    });
+
+    // ===== JSON 数据展示（语法高亮）=====
+    function syntaxHighlight(obj) {
+      const json = JSON.stringify(obj, null, 2);
+      return json
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+          (match) => {
+            let cls = 'json-number';
+            if (/^"/.test(match)) {
+              cls = /:$/.test(match) ? 'json-key' : 'json-string';
+            } else if (/true|false/.test(match)) {
+              cls = 'json-bool';
+            } else if (/null/.test(match)) {
+              cls = 'json-bool';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+          }
+        );
+    }
+    document.getElementById('jsonData').innerHTML = syntaxHighlight(usageData);
+  </script>
+</body>
+</html>

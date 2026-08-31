@@ -1,0 +1,44 @@
+# config/tools/scan_drafts.yaml
+# 草稿仓库增量扫描工具（Layer B）：content_curator agent 入口 B 专用
+# 设计文档：docs/knowledge-base/DESIGN_content_curator_agent.md §3.2
+# 实现文件：tools/scan_drafts.py
+#
+# 判断「已处理」的信号：frontmatter.ingested_at 字段（obsidian_vault.write_file 自动注入）
+# 无此字段视为未处理；since 非空时额外按 mtime 过滤
+#
+# 默认草稿仓库：E:\Document\草稿仓库\
+tool_id: scan_drafts
+display_name: 草稿仓库扫描
+description: |
+  草稿仓库增量扫描工具。content_curator agent 入口 B（templated DAG）的 scan_drafts 节点调用本工具
+  扫描 E:\Document\草稿仓库\ 下新增/未处理的文档。
+  判断「已处理」的信号是 frontmatter.ingested_at 字段（obsidian_vault.write_file 自动注入），
+  无此字段视为未处理。since 非空时额外按 mtime 过滤（增量），since 为空时扫所有未处理文档。
+  跳过 .obsidian/ 配置目录和非 md 文件。
+input_schema:
+  type: object
+  properties:
+    since:
+      type: string
+      description: 起始时间（ISO 8601，如 "2026-07-01T00:00:00+08:00"，不传则扫所有未处理）
+    draft_root:
+      type: string
+      default: "草稿仓库"
+      description: 草稿仓库相对路径（默认 "草稿仓库"，对应 E:\Document\草稿仓库\）
+    max_results:
+      type: integer
+      default: 50
+      description: 单次扫描上限
+    agent_id:
+      type: string
+      description: 调用方 agent id（如 content_curator）
+handler:
+  module: tools.scan_drafts
+  function: scan_drafts
+  config:
+    timeout_seconds: 30
+allowed_domains:
+  - content_curator
+audit:
+  log_args: true
+  log_result: true

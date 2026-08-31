@@ -1,0 +1,36 @@
+# config/tools/ssh_exec.yaml
+tool_id: ssh_exec
+display_name: SSH 命令执行
+description: 通过 SSH 在远程服务器执行命令（高危操作）
+input_schema:
+  type: object
+  properties:
+    server_id:
+      type: string
+      description: 目标服务器标识
+    command:
+      type: string
+      description: 要执行的 shell 命令
+    timeout:
+      type: integer
+      description: 命令超时秒数
+      default: 60
+  required: [server_id, command]
+handler:
+  module: tools.ops_tools
+  function: execute_ssh_command
+  config:
+    max_timeout_seconds: 300
+    allowed_users: [deploy, ops]
+allowed_domains:
+  - smart_ops
+audit:
+  log_args: true
+  log_result: true
+  redact_patterns:
+    - "(?i)password\\s*=\\s*\\S+"
+    - "(?i)secret\\s*=\\s*\\S+"
+requires_human_approval: true             # 高危：需人工确认
+approval_widget:
+  type: form
+  fields: [server_id, command, confirm]

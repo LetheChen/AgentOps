@@ -1,0 +1,44 @@
+# config/tools/task_decompose_decide.yaml
+# P2 分解决策：多因子决策树（确定性判定 + 决策书落库）
+# 设计文档：docs/product-design/DESIGN_task_lifecycle_automation_v1.md §5.4
+tool_id: task_decompose_decide
+display_name: 分解决策
+description: |
+  四因子（工作量/耦合度/依赖结构/风险隔离）跑确定性决策树，输出拆分策略
+  （none 单agent直接执行 / single 单agent依次执行 / recursive 父子+DAG）
+  并生成可解释的分解决策书存 task_reports。LLM 只评估因子，决策逻辑 100% 确定性。
+input_schema:
+  type: object
+  properties:
+    task_id:
+      type: string
+      description: 任务 ID（应处于 decomposing 阶段）
+    workload:
+      type: string
+      enum: [simple, medium, complex]
+      description: 工作量因子（改动面估算：文件数/模块数/预估当量）
+    coupling:
+      type: string
+      enum: [high, low]
+      description: 上下文耦合度（改动是否集中在同模块/同文件）
+    dependency:
+      type: string
+      enum: [serial, independent]
+      description: 依赖结构（子块间串行依赖链 / 天然独立可并行）
+    need_risk_isolation:
+      type: boolean
+      default: false
+      description: 是否需风险隔离（高风险块独立拆出）
+    reasons:
+      type: object
+      description: 各因子评估依据（可解释溯源，可选）
+  required: [task_id, workload, coupling, dependency]
+handler:
+  module: tools.task_decompose_decide
+  function: task_decompose_decide
+  config:
+    timeout_seconds: 30
+allowed_domains: [task_management]
+audit:
+  log_args: true
+  log_result: true

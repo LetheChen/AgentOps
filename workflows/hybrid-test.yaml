@@ -1,0 +1,55 @@
+# P4 混合模式测试 DAG
+# 一个节点用 local_llm harness（原生 LLM + 单轮工具循环），其余用 deterministic
+# 验证 DAG 节点能降级为对话子任务，完成后回到 DAG 调度
+
+workflow_id: hybrid-test
+name: Hybrid Mode Test DAG
+version: 1.0
+description: |
+  P4 混合模式测试：fetch（deterministic）→ analyze（local_llm）→ report（deterministic）
+  analyze 节点用 local_llm harness（原生 LLM + 单轮工具循环）。
+
+inputs:
+  - name: topic
+    type: string
+    required: true
+    default: "混合模式测试"
+
+nodes:
+  fetch:
+    name: 数据采集
+    type: agent
+    agent: echo_agent
+    business_role: 数据采集员
+    harness: deterministic
+    after: []
+    inputs: [topic]
+    outputs:
+      fetched:
+        to: "analyze.in:fetched"
+
+  analyze:
+    name: 对话分析
+    type: agent
+    agent: echo_agent
+    business_role: 对话分析员
+    harness: local_llm
+    after: [fetch]
+    inputs: [topic, fetched]
+    outputs:
+      analyzed:
+        to: "report.in:analyzed"
+    config:
+      max_turns: 5
+
+  report:
+    name: 输出报告
+    type: agent
+    agent: echo_agent
+    business_role: 报告输出员
+    harness: deterministic
+    after: [analyze]
+    inputs: [topic, analyzed]
+    outputs:
+      done:
+        to: ""

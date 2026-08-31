@@ -1,0 +1,195 @@
+workflow_id: smart-query
+name: 智能问数（一次性查询工作流）
+version: 2
+description: |
+  一次性查询工作流：manager 调度入口。6 节点混合 DAG，agent + command 组合。
+  适用：审批数据统计 / 流程分析 / 状态查询 / 成本核算（只读 SELECT）。
+  不适用：写操作 / 多表 JOIN 复杂 BI / 跨域需求 / 通用问答。
+  
+layout:
+  nodes:
+    route_intent:
+      x: 100
+      y: 200
+    resolve_schema:
+      x: 400
+      y: 100
+    plan_sql:
+      x: 700
+      y: 300
+    validate_sql:
+      x: 1000
+      y: 200
+    execute_query:
+      x: 1300
+      y: 100
+    present_result:
+      x: 1600
+      y: 250
+    refuse_intent:
+      x: 400
+      y: 500
+workspace:
+  root: "workspace/smart-query/{{run_id}}/"
+  structure:
+    artifacts: artifacts/
+    logs: logs/
+timeout_seconds: 300
+max_concurrent_runs: 3
+failure_policy:
+  on_node_failed: stop
+inputs:
+  - name: question
+    type: string
+    required: true
+    description: "用户自然语言问题（如\"本月审批通过率多少\"）"
+  - name: database
+    type: string
+    required: false
+    default: "mysql:audit_reader"
+    description: 数据库连接标识（白名单授权，对应 config/db_whitelist.yaml 的 databases 键）
+nodes:
+  route_intent:
+    name: 意图路由
+    type: agent
+    agent: smart_query
+    business_role: 意图分类员
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: []
+    inputs:
+      - question
+    outputs:
+      intent:
+        to:
+          - "resolve_schema.in:intent"
+          - "refuse_intent.in:intent"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  resolve_schema:
+    name: 解析数据库表结构
+    type: command
+    business_role: 数据管理员
+    harness: deterministic
+    after: [route_intent]
+    inputs:
+      - database
+      - intent
+    outputs:
+      success:
+        to: "plan_sql.in:schema_info"
+    skip_if: "{{not route_intent.intent}}"
+    command_config:
+      cli_template: "python tools/db_cli.py resolve-schema --database {database}"
+      timeout_seconds: 30
+      success_exit_code: 0
+      parse_stdout: json.loads(stdout)
+      parse_stderr: null
+      allowed_env_keys: []
+      cwd: null
+    await_command_config: null
+    while_config: null
+  plan_sql:
+    name: 生成 SQL
+    type: agent
+    agent: smart_query
+    business_role: SQL 工程师
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [resolve_schema]
+    inputs:
+      - question
+      - schema_info
+    outputs:
+      sql:
+        to:
+          - "validate_sql.in:sql"
+          - "execute_query.in:sql"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  validate_sql:
+    name: SQL 安全校验
+    type: command
+    business_role: 安全审计员
+    harness: deterministic
+    after: [plan_sql]
+    inputs:
+      - database
+      - sql
+    outputs:
+      success:
+        to: "present_result.in:validate_result"
+    command_config:
+      cli_template: "python tools/db_cli.py validate --database {database} --sql \"{sql}\""
+      timeout_seconds: 10
+      success_exit_code: 0
+      parse_stdout: json.loads(stdout)
+      parse_stderr: null
+      allowed_env_keys: []
+      cwd: null
+    await_command_config: null
+    while_config: null
+  execute_query:
+    name: 执行 SQL 查询
+    type: command
+    business_role: 数据执行员
+    harness: deterministic
+    after: [validate_sql]
+    inputs:
+      - database
+      - sql
+    outputs:
+      success:
+        to: "present_result.in:query_result"
+    command_config:
+      cli_template: "python tools/db_cli.py query --database {database} --sql \"{sql}\""
+      timeout_seconds: 60
+      success_exit_code: 0
+      parse_stdout: json.loads(stdout)
+      parse_stderr: null
+      allowed_env_keys: []
+      cwd: null
+    await_command_config: null
+    while_config: null
+  present_result:
+    name: 呈现查询结果
+    type: agent
+    agent: smart_query
+    business_role: 结果讲解员
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [execute_query]
+    inputs:
+      - question
+      - query_result
+      - validate_result
+    outputs:
+      answer:
+        to: ""
+    command_config: null
+    await_command_config: null
+    while_config: null
+  refuse_intent:
+    name: 拒绝非数据查询
+    type: command
+    business_role: 意图分类员
+    harness: deterministic
+    after: [route_intent]
+    inputs:
+      - intent
+    outputs:
+      success:
+        to: ""
+    skip_if: "{{route_intent.intent}}"
+    command_config:
+      cli_template: "python -c \"import json,sys; sys.stdout.write(json.dumps({'ok': False, 'error': '非数据查询请求，请改用通用对话入口'}, ensure_ascii=False))\""
+      timeout_seconds: 5
+      success_exit_code: 0
+      parse_stdout: json.loads(stdout)
+      parse_stderr: null
+      allowed_env_keys: []
+      cwd: null
+    await_command_config: null
+    while_config: null

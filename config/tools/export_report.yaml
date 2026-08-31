@@ -1,0 +1,35 @@
+# config/tools/export_report.yaml
+tool_id: export_report
+display_name: 导出报表
+description: 导出数据报表（Excel/PDF/CSV）
+input_schema:
+  type: object
+  properties:
+    format:
+      type: string
+      enum: [xlsx, pdf, csv]
+      description: 导出格式
+    data:
+      type: object
+      description: 报表数据（表头+行）
+      additional_properties: true
+    filename:
+      type: string
+      description: 导出文件名
+    title:
+      type: string
+      description: 报表标题
+  required: [format, data]
+handler:
+  module: tools.analysis_tools
+  function: export_report_file
+  config:
+    max_rows: 50000
+    timeout_seconds: 60
+    output_dir: ${REPORT_OUTPUT_DIR:-/tmp/reports}
+allowed_domains:
+  - smart_query
+  - smart_analysis
+audit:
+  log_args: true
+  log_result: true

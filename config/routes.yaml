@@ -1,0 +1,31 @@
+# P6: 意图识别路由表
+# 关键词匹配（确定性）+ LLM 分类（兜底）
+keyword_routes:
+  smart_query:
+    # P0.18.13 重写：smart_query 定位为「OA 流程接口数据查询」占位。
+    # 关键词聚焦"看"的动作（查/进度/情况/状态/谁批了）+ 业务域（OA/审批/流程/致远/差旅/工单）。
+    # 不放「提交/报销/请假」等创建动作词——这些由 smart_form 路由，避免多域冲突走 fallback。
+    # 例：「费用报销审批流程情况」命中（流程+情况），「提交报销单」走 smart_form（提交）。
+    keywords: [查询, 审批, 流程, 单据, 工单, 进度, 情况, 状态, 谁批, 走到, OA, 致远, 差旅, 审批流, 审批进度, 审批人, 审批结果, 审批意见, 审批通过, 审批驳回, 流程进度, 工单状态]
+  smart_ops:
+    keywords: [服务器, 重启, 运维, 部署, 监控, 告警, 日志]
+  smart_approval:
+    keywords: [审批, 审核, 流转, 批准, 驳回]
+  smart_form:
+    keywords: [填单, 表单, 提交, OA, 报销, 请假]
+  smart_analysis:
+    keywords: [分析, 趋势, 预测, 可视化, 洞察]
+
+# 固定 DAG 模板映射（有预定义模板的直接路由）
+template_routes:
+  travel_expense: travel-expense  # 差旅报销 → 固定 DAG
+  视频: video-pipeline
+  视频制作: video-pipeline
+  生成视频: video-pipeline
+
+# LLM 兜底分类 prompt
+llm_classify_prompt: |
+  判断用户请求属于哪个业务域。
+  可选域：smart_query/smart_ops/smart_approval/smart_form/smart_analysis
+  如果跨域，返回 manager。
+  只返回域名，不要解释。

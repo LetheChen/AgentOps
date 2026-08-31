@@ -1,0 +1,71 @@
+# config/tools/obsidian_vault.yaml
+# Obsidian vault 统一访问工具（Layer A）：三个个人助理 agent 共用
+# 设计文档：docs/knowledge-base/DESIGN_knowledge_base_module.md §3
+# 实现文件：tools/obsidian_vault.py
+#
+# 7 个 action：
+#   list_files / read_file / write_file / search_by_keyword / search_by_tag / scan_incremental / validate_path
+#
+# 安全规则：
+#   - 读操作可读全 vault（E:\Document 下所有文件）
+#   - 写操作只能在 Articles\Reports\Notes\Weekly\Images\ 下
+#   - write_file 自动注入 frontmatter（ingested_at / ingested_by / type / tags）
+#   - 命名规则校验（如 Weekly\ 下必须匹配 工作周报_YYYY-MM-DD_MM-DD.md）
+tool_id: obsidian_vault
+display_name: Obsidian Vault 访问
+description: |
+  Obsidian vault 统一访问工具。两个个人助理 agent（content_curator / proposal_planner）共用。
+  支持文件列举、读取（含非 md 文件文本抽取：pdf/pptx/docx/xlsx/html）、写入（path 白名单 + frontmatter 自动注入）、
+  关键词搜索、tag 搜索、增量扫描、路径校验 7 个 action。
+  读操作可读全 vault，写操作只能在 Articles\Reports\Notes\Weekly\Images\ 下以保护用户原始笔记。
+input_schema:
+  type: object
+  properties:
+    action:
+      type: string
+      enum: [list_files, read_file, write_file, search_by_keyword, search_by_tag, scan_incremental, validate_path]
+      description: 操作类型
+    path:
+      type: string
+      description: vault 内相对路径（如 "Weekly/工作周报_2026-06-29_07-05.md"）
+    content:
+      type: string
+      description: write_file 时的文件内容
+    frontmatter:
+      type: object
+      description: write_file 时的 frontmatter（自动字段会合并补齐）
+      additional_properties: true
+    ext_filter:
+      type: array
+      items: {type: string}
+      description: list_files 时的扩展名过滤（如 ["md", "pdf"]）
+    tag_filter:
+      type: array
+      items: {type: string}
+      description: list_files/search_by_tag 时的 tag 过滤
+    query:
+      type: string
+      description: search_by_keyword 时的搜索词
+    since:
+      type: string
+      description: scan_incremental 时的起始时间（ISO 8601，如 "2026-07-10T00:00:00+08:00"）
+    max_results:
+      type: integer
+      default: 100
+      description: 搜索结果上限
+    agent_id:
+      type: string
+      description: 调用方 agent id（用于 frontmatter ingested_by 字段，如 content_curator / proposal_planner）
+  required: [action]
+handler:
+  module: tools.obsidian_vault
+  function: obsidian_vault
+  config:
+    timeout_seconds: 30
+    vault_root: "E:\\Document"
+allowed_domains:
+  - content_curator
+  - proposal_planner
+audit:
+  log_args: true
+  log_result: true

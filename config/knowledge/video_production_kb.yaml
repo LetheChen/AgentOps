@@ -1,0 +1,22 @@
+# config/knowledge/video_production_kb.yaml
+# 视频生产知识库（config/knowledge/video-production/ 下的 references + prompt-templates）
+kb_id: video_production
+display_name: 视频生产知识库
+description: 视频生产全流程知识库（旁白风格/分镜格式/图像 prompt/合成设计系统）
+source:
+  type: file
+  connection: config/knowledge/video-production/
+  collection: video_production_refs
+permissions:
+  read:
+    - video_production                     # 本域读写
+  write:
+    - video_production                     # 只有本域能写
+  admin:
+    - video_production_admin
+content_categories:
+  - narration_style                        # 旁白风格规则
+  - storyboard_format                      # 分镜格式 spec
+  - image_prompts                          # 图像 prompt 模板
+  - composition_design                     # 合成设计系统
+retention_days: 365

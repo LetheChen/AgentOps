@@ -1,0 +1,48 @@
+# workflows/example-greet.yaml
+# 示例问候工作流 — 用于演示 workflow-author skill 生成的规范 yaml
+# 2 步 DAG：generate → notify
+
+workflow_id: example-greet
+name: 示例问候工作流
+version: 1.0
+description: |
+  2 步 DAG 示例：generate → notify。
+  用于演示 workflow yaml 规范，可作为 workflow-author skill 的参考样本。
+
+inputs:
+  - name: user_name
+    type: string
+    required: true
+    description: 要问候的用户名
+
+nodes:
+  generate:
+    name: Step 1 · 生成问候语
+    type: agent
+    agent: content_curator
+    business_role: 问候生成员
+    harness: local_llm
+    after: []
+    inputs: [user_name]
+    outputs:
+      greeting:
+        to: "notify.in:greeting"
+
+  notify:
+    name: Step 2 · 输出问候
+    type: agent
+    agent: content_curator
+    business_role: 通知员
+    harness: deterministic
+    after: [generate]
+    inputs: [greeting]
+
+widgets:
+  - id: w_greeting
+    type: memo
+    title: 问候语
+    emit_on:
+      node: generate
+      event: node.completed
+    props:
+      text: "{{generate.greeting}}"

@@ -1,0 +1,26 @@
+# config/tools/list_tasks.yaml
+# P0 任务管理：查任务列表（只读便捷工具，不计入 14 个业务工具）
+tool_id: list_tasks
+display_name: 查询任务列表
+description: |
+  查询任务列表（只读），供 agent 查看任务列表与当前版本号。
+  支持按 project_id / status 过滤。
+input_schema:
+  type: object
+  properties:
+    project_id:
+      type: string
+      description: 项目 ID 过滤（可选）
+    status:
+      type: string
+      enum: [idea, backlog, discussing, reviewing, closed]
+      description: 状态过滤（可选）
+handler:
+  module: tools.list_tasks
+  function: list_tasks
+  config:
+    timeout_seconds: 5
+allowed_domains: [manager, task_planner]
+audit:
+  log_args: false
+  log_result: true

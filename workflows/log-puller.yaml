@@ -1,0 +1,66 @@
+workflow_id: log-puller
+name: 日志拉取
+version: 1
+description: |
+  2 步 DAG 版远程日志拉取：pull → report。
+  按 log_pull_sources 配置从远程服务器 SFTP 拉取日志到本地白名单目录（增量位点）。
+  失败推送监控告警；成功静默报告。
+  
+workspace:
+  root: "workspace/log-puller/{{run_id}}/"
+  structure:
+    reports: reports/
+layout:
+  nodes:
+    pull:
+      x: 80
+      y: 60
+    report:
+      x: 360
+      y: 60
+inputs:
+  - name: pull_source_id
+    type: string
+    required: true
+    description: 拉取源 ID（对应 config/patrol.yaml 的 log_pull_sources.id，如 prod-seeyon）
+nodes:
+  pull:
+    name: 拉取日志
+    type: agent
+    agent: log_puller
+    business_role: log_puller
+    role_prompt: |
+      你是数据拉取员，负责从远程服务器拉取日志文件到本地白名单目录。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: []
+    timeout_seconds: 180
+    inputs:
+      - pull_source_id
+    outputs:
+      pull_result:
+        to: "report.in:pull_result"
+    command_config: null
+    await_command_config: null
+    while_config: null
+  report:
+    name: 汇总报告
+    type: agent
+    agent: log_puller
+    business_role: log_puller
+    role_prompt: |
+      你是拉取报告员，负责根据拉取结果推送告警并写摘要报告。
+      
+    harness: local_llm
+    model: vLLM/qwen3.8-flash
+    after: [pull]
+    timeout_seconds: 120
+    inputs:
+      - pull_result
+    outputs:
+      report_path:
+        to: ""
+    command_config: null
+    await_command_config: null
+    while_config: null

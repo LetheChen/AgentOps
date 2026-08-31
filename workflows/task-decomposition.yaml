@@ -1,0 +1,115 @@
+workflow_id: task-decomposition
+name: 任务分解决策
+version: 1
+description: |
+  4 步 DAG 版分解决策：estimate → decide → split → relations
+  多因子决策树（工作量/耦合度/依赖结构/风险隔离）判定拆不拆、怎么拆：
+  none（单 agent 直接执行）/ single（单 agent 依次执行）/ recursive（父子+DAG）
+  产出可解释分解决策书存 task_reports；recursive 时创建子任务并补全
+  blocks 依赖关系与风险级别；高风险拆分方案 @用户 人审。
+  
+workspace:
+  root: "workspace/task-decomposition/{{run_id}}/"
+  structure:
+    reports: reports/
+    data: data/
+inputs:
+  - name: task_id
+    type: string
+    required: true
+    description: 待分解任务 ID（应处于 decomposing 阶段）
+nodes:
+  estimate:
+    name: 因子评估
+    type: agent
+    agent: task_decomposer
+    business_role: 分解评估员
+    role_prompt: |
+      你是分解评估员，负责评估任务的工作量/耦合度/依赖结构/风险隔离四因子。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M3
+    after: []
+    timeout_seconds: 180
+    inputs:
+      - task_id
+    outputs:
+      factors:
+        to: "decide.in:factors"
+  decide:
+    name: 决策树判定
+    type: agent
+    agent: task_decomposer
+    business_role: 分解决策员
+    role_prompt: |
+      你是分解决策员，负责调用确定性决策树工具生成分解决策书。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M2.7-highspeed
+    after: [estimate]
+    timeout_seconds: 180
+    inputs:
+      - task_id
+      - factors
+    outputs:
+      decision:
+        to: "split.in:decision"
+  split:
+    name: 拆分落库
+    type: agent
+    agent: task_decomposer
+    business_role: 拆分执行员
+    role_prompt: |
+      你是拆分执行员，负责按 recursive 策略创建子任务（父子关系 + 高风险人审通知）。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M3
+    after: [decide]
+    timeout_seconds: 180
+    inputs:
+      - task_id
+      - decision
+    outputs:
+      split_result:
+        to: "relations.in:split_result"
+  relations:
+    name: 关系风险补全
+    type: agent
+    agent: task_decomposer
+    business_role: 关系补全员
+    role_prompt: |
+      你是关系补全员，负责补全子任务间 blocks 依赖关系与风险级别，并评估上下游任务。
+      
+    harness: local_llm
+    model: minimax/MiniMax-M3
+    after: [split]
+    timeout_seconds: 180
+    inputs:
+      - task_id
+      - decision
+      - split_result
+    outputs:
+      relations_result:
+        to: ""
+widgets:
+  - id: w_task_decomposition_progress
+    type: progress_status
+    title: 分解决策进度
+    emit_on:
+      node: estimate
+      event: node.started
+    props:
+      title: 任务分解决策
+      steps:
+        -           id: estimate
+                    title: 因子评估
+                    node: estimate
+        -           id: decide
+                    title: 决策树判定
+                    node: decide
+        -           id: split
+                    title: 拆分落库
+                    node: split
+        -           id: relations
+                    title: 关系风险补全
+                    node: relations

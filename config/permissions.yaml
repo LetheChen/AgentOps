@@ -1,0 +1,5 @@
+# 全局权限策略
+default_policy: deny  # 默认拒绝（fail-closed）
+tool_call_audit: true  # 所有工具调用都审计
+high_risk_tools_require_approval: true  # 高危工具需人工确认
+cross_domain_requires_manager: true  # 跨域请求必须经 Manager 中转

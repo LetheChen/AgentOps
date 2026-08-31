@@ -1,0 +1,38 @@
+# config/db_whitelist.yaml — 数据库只读查询白名单（sql_query 工具的 schema 白名单层）
+# 生成依据：2026-08-26 连远端 MySQL ${DB_AUDIT_HOST}:${DB_AUDIT_PORT} audit_platform 实测（temp/audit_reader_schema.json）
+# 部署说明：所有 ${ENV_VAR} 占位符由 tools/sql_validator.py:load_whitelist 在加载时从环境变量展开
+# 禁止把生产 IP 写在本文件中——通过环境变量 DB_AUDIT_HOST / DB_AUDIT_PORT 注入
+# 结构：default_policy: deny（默认拒绝未放行对象）；每个数据库连接一个 databases.<conn_key> 段
+#
+# 注意：
+# - allowed_schemas：允许查询的 schema（MySQL 的 schema = database 名）
+# - allowed_tables：每个 schema 下允许查询的表
+# - denied_columns：列级屏蔽（正则，忽略大小写），即使 SELECT 显式查也拒绝
+# - operation_limits.max_rows：单查询最大返回行数（LLM 没写 LIMIT 时自动追加）
+# - row_filters：强制注入的 WHERE 条件模板（占位 :xxx 从会话身份取；当前无会话身份，留空）
+default_policy: deny
+
+databases:
+  # audit_reader @ <audit_host>:<audit_port>（智能审批业务数据，用户名 audit_app）
+  mysql:audit_reader:
+    allowed_schemas:
+      - audit_platform
+    allowed_tables:
+      audit_platform:
+        - access_logs          # 访问日志：request_id/method/path/status_code/client_ip/username/duration_ms
+        - audit_item_results   # 审计条目结果：request_id/item_id/item_name/status/decision/extracted_data
+        - audit_records        # 审计记录（核心）：request_id/agent_id/agent_name/form_app_id/doc_number/status/decision/receive_time/complete_time/applicant_id
+        - audit_step_logs      # 审计步骤日志：request_id/step_id/step_name/action/status/input_data/output_data
+        - llm_call_logs        # LLM 调用日志：call_id/request_id/agent_id/model_name/provider/status/tokens/latency_ms/cost_rmb
+        - llm_model_pricing    # LLM 模型定价：model_name/model_category/input_price_per_1k/output_price_per_1k
+        - users                # 用户：username/role/user_type/is_active（注意 password_hash 已屏蔽）
+    denied_columns:
+      - "password_hash"        # users.password_hash（用户密码哈希，禁止查询）
+      - ".*password.*"         # 任何含 password 的列一律拒绝（兜底）
+      - ".*\\bssn\\b.*"        # 证件类敏感列（如 *_ssn）
+      - "node_token"           # audit_records.node_token（内部令牌）
+    row_filters: []            # 当前无会话身份体系，暂不注入行级过滤
+    operation_limits:
+      max_rows: 5000
+      max_query_seconds: 30
+      forbidden_keywords: []   # 额外危险词（内置黑名单已覆盖 OUTFILE/SLEEP/DML/DDL 等）
