@@ -1,6 +1,6 @@
 # AGENTS.md — AgentOps
 
-最后更新：2026-08-31（开源仓库重建 + 隐私全量清洗 + README 单镜像同步；护栏新增「commit 前必 git diff 验证」）
+最后更新：2026-08-31（README 单镜像架构同步 + AGENTS.md 护栏收紧）
 
 ## Session Maintenance Protocol
 
@@ -10,13 +10,19 @@
 
 1. **回看本次会话实际做了什么** —— 改动的文件、发现的问题、用户新增的约束
 2. **更新 TODO.md**（决策表见 `.claude/rules/session-maintenance-protocol.md`）：
-   - 完成了某项 → 移到 ✅ 段，加 (YYYY-MM-DD)
-   - 新发现的问题 → 加到 🟡（P1/P2）或 🟢（P3+），附源链接
-   - 放弃某项 → 移到 ✅ 段，备注 已放弃：<原因>
+
+   * 完成了某项 → 移到 ✅ 段，加 (YYYY-MM-DD)
+
+   * 新发现的问题 → 加到 🟡（P1/P2）或 🟢（P3+），附源链接
+
+   * 放弃某项 → 移到 ✅ 段，备注 已放弃：<原因>
 3. **更新本文件的规则** —— 如果本次会话暴露了新的项目级约定：
-   - 用户反复纠正的行为 → 加到 Things to avoid 段（CLAUDE.md）
-   - 反复跑错的命令 → 更新 Verification 段
-   - 隐含约定 → 加到 Project conventions 段
+
+   * 用户反复纠正的行为 → 加到 Things to avoid 段（CLAUDE.md）
+
+   * 反复跑错的命令 → 更新 Verification 段
+
+   * 隐含约定 → 加到 Project conventions 段
 4. **刷新日期戳** → 最后更新：YYYY-MM-DD（即使其他都没变）
 
 **触发条件**：≥1 个源文件被改 · 用户新增了约束 · 会话 > 10 分钟
@@ -33,9 +39,11 @@
 
 完整规则集见 CLAUDE.md（含 Things to avoid、docs/ 目录约定等）；本文件作精简入口。
 
-- 会话维护协议：`.claude/rules/session-maintenance-protocol.md`
-- 后端 / harness / workflow / 前端 / 知识库 子规则：`.claude/rules/{workflow,harness,frontend,knowledge}.md`
-- 速查：`docs/INDEX.md`（设计文档总索引）
+* 会话维护协议：`.claude/rules/session-maintenance-protocol.md`
+
+* 后端 / harness / workflow / 前端 / 知识库 子规则：`.claude/rules/{workflow,harness,frontend,knowledge}.md`
+
+* 速查：`docs/INDEX.md`（设计文档总索引）
 
 ## Karpathy 4 准则
 
@@ -63,18 +71,27 @@ curl http://127.0.0.1:5173/
 
 详细版见 CLAUDE.md「Things to avoid」段。摘要：
 
-- PowerShell 中文字符串陷阱：用 `Write` 工具创建 `.ps1` 时含中文 + `[regex]::Replace` 会乱码 → 优先 `Read` 定位 + `SearchReplace` 逐处修复
-- 目录 rename 后必查引用：波及 CLAUDE.md / TODO.md / skills/*.md / README.md 等非 docs/ 文件
-- grep 旧名时要避免被新前缀误命中：用 `\b` 或负向 lookbehind
-- 临时 .ps1 / .py 脚本要即用即删：跑完立即 `Remove-Item`，不要在 docs/ / scripts/ 下残留
-- **删除 `.git` 前必须 `git add` + `git diff --cached` 验证改动确实已 staged**：commit message 写得再漂亮，HEAD 里没改就是没改；做了 SearchReplace 不等于真的改了工作区
-- **commit message 必须与实际改动一致**：commit 之前先 `git diff --cached --stat`，看到 README.md 0 改动就别在 message 里说改了
-- **提交到公开仓库前必做隐私扫描**：grep 至少 `辰安 / 公司名 / 内部比赛名 / 内部 IP / 本地绝对路径`；命中后立即决定保留（历史项目名）/ 删除（公司信息）
+* PowerShell 中文字符串陷阱：用 `Write` 工具创建 `.ps1` 时含中文 + `[regex]::Replace` 会乱码 → 优先 `Read` 定位 + `SearchReplace` 逐处修复
+
+* 目录 rename 后必查引用：波及 CLAUDE.md / TODO.md / skills/\*.md / README.md 等非 docs/ 文件
+
+* grep 旧名时要避免被新前缀误命中：用 `\b` 或负向 lookbehind
+
+* 临时 .ps1 / .py 脚本要即用即删：跑完立即 `Remove-Item`，不要在 docs/ / scripts/ 下残留
+
+* **删除** **`.git`** **前必须** **`git diff --cached`** **验证改动已 staged**：commit message 写得再漂亮，HEAD 里没改就是没改；做了 SearchReplace 不等于真的改了工作区
+
+* **commit message 必须与实际改动一致**：commit 前先 `git diff --cached --stat`，看到 README.md 0 改动就别在 message 里说改了
 
 ## Project conventions
 
-- 设计文档按侧栏菜单项归档：`docs/00-platform/`（跨菜单）+ `docs/NN-<menu-name>/`（01-09 菜单）
-- 文件名前缀：REQUIREMENTS-/DESIGN-/ANALYSIS-/REVIEW-/RESEARCH-/PLAN-/ARCHIVED-/DEPRECATED-（连字符分隔）
-- 文档间互相引用时使用相对路径，rename 后必须同步更新所有引用方
-- 前端验收：涉及前端关联能力的功能必须通过浏览器真实确认（Playwright）
-- 涉及架构/流程图时**必须**用 Mermaid，禁止 ASCII / 纯文本拼凑
+* 设计文档按侧栏菜单项归档：`docs/00-platform/`（跨菜单）+ `docs/NN-<menu-name>/`（01-09 菜单）
+
+* 文件名前缀：REQUIREMENTS-/DESIGN-/ANALYSIS-/REVIEW-/RESEARCH-/PLAN-/ARCHIVED-/DEPRECATED-（连字符分隔）
+
+* 文档间互相引用时使用相对路径，rename 后必须同步更新所有引用方
+
+* 前端验收：涉及前端关联能力的功能必须通过浏览器真实确认（Playwright）
+
+* 涉及架构/流程图时**必须**用 Mermaid，禁止 ASCII / 纯文本拼凑
+
